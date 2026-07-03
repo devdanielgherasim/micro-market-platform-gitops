@@ -1,0 +1,127 @@
+global:
+  repoURL: https://gitlab.com/microservices1691715/platform-gitops.git
+  targetRevision: HEAD
+  project: platform
+  destinationServer: https://kubernetes.default.svc
+  cloudProvider: azure
+  environment: dev
+  domain: danielgherasim.com
+  acmeEmail: admin@danielgherasim.com
+  clusterIssuer: letsencrypt-cloudflare-dns
+  cloudflareApiTokenSecretName: cloudflare-api-token
+  storageClass:
+    aws: gp3
+    azure: managed-csi
+    gcp: standard-rwo
+
+project:
+  namespace: argocd
+
+addons:
+  aws-load-balancer-controller:
+    enabled: true
+    enabledFor: [aws]
+    namespace: kube-system
+    repoURL: https://aws.github.io/eks-charts
+    chart: aws-load-balancer-controller
+    targetRevision: 1.8.2
+    syncWave: "-20"
+    valuesPath: platform/aws-load-balancer-controller/values.yaml
+  storage-class:
+    enabled: true
+    enabledFor: [aws]
+    namespace: kube-system
+    path: platform/storage-class
+    syncWave: "-19"
+  cert-manager:
+    enabled: true
+    namespace: nginx
+    repoURL: https://charts.jetstack.io
+    chart: cert-manager
+    targetRevision: v1.17.2
+    syncWave: "-18"
+    valuesPath: platform/cert-manager/values.yaml
+  cert-manager-config:
+    enabled: true
+    namespace: nginx
+    path: platform/cert-manager-config
+    syncWave: "-17"
+  ingress-nginx:
+    enabled: true
+    namespace: nginx
+    repoURL: https://kubernetes.github.io/ingress-nginx
+    chart: ingress-nginx
+    targetRevision: 4.12.2
+    syncWave: "-16"
+    valuesPath: platform/ingress-nginx/values.yaml
+  external-dns:
+    enabled: true
+    namespace: external-dns
+    repoURL: https://kubernetes-sigs.github.io/external-dns/
+    chart: external-dns
+    targetRevision: 1.15.2
+    syncWave: "-15"
+    valuesPath: platform/external-dns/values.yaml
+  external-secrets:
+    enabled: true
+    namespace: external-secrets
+    repoURL: https://charts.external-secrets.io
+    chart: external-secrets
+    targetRevision: 0.10.5
+    syncWave: "-14"
+    valuesPath: platform/external-secrets/values.yaml
+  kube-prometheus-stack:
+    enabled: true
+    namespace: monitoring
+    repoURL: https://prometheus-community.github.io/helm-charts
+    chart: kube-prometheus-stack
+    targetRevision: 75.3.0
+    syncWave: "-10"
+    valuesPath: platform/kube-prometheus-stack/values.yaml
+  monitoring-config:
+    enabled: true
+    namespace: monitoring
+    path: platform/monitoring-config
+    syncWave: "-9"
+  loki:
+    enabled: true
+    namespace: monitoring
+    repoURL: https://grafana.github.io/helm-charts
+    chart: loki
+    targetRevision: 6.30.1
+    syncWave: "-8"
+    valuesPath: platform/loki/values.yaml
+  alloy:
+    enabled: true
+    namespace: monitoring
+    repoURL: https://grafana.github.io/helm-charts
+    chart: alloy
+    targetRevision: 1.1.1
+    syncWave: "-7"
+    valuesPath: platform/alloy/values.yaml
+  postgresql:
+    enabled: true
+    namespace: postgresql
+    repoURL: https://charts.bitnami.com/bitnami
+    chart: postgresql
+    targetRevision: 12.5.8
+    syncWave: "-5"
+    valuesPath: platform/postgresql/values.yaml
+  keycloak:
+    enabled: true
+    namespace: keycloak
+    repoURL: https://charts.bitnami.com/bitnami
+    chart: keycloak
+    targetRevision: 22.0.1
+    syncWave: "-4"
+    valuesPath: platform/keycloak/values.yaml
+  keycloak-config:
+    enabled: true
+    namespace: keycloak
+    path: platform/keycloak-config
+    syncWave: "-3"
+  platform-ingresses:
+    enabled: true
+    namespace: nginx
+    path: platform/platform-ingresses
+    syncWave: "-2"

@@ -1,0 +1,229 @@
+prometheus:
+  prometheusSpec:
+    retention: 15d
+    evaluationInterval: 30s
+    scrapeInterval: 30s
+    serviceMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorSelector: {}
+    podMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelector: {}
+    walCompression: true
+    enableAdminAPI: false
+    externalUrl: /prometheus
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: managed-csi
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 10Gi
+    resources:
+      requests:
+        memory: 256Mi
+        cpu: 200m
+      limits:
+        memory: 512Mi
+        cpu: 500m
+    replicas: 1
+    externalLabels:
+      cluster: dev
+      environment: dev
+
+alertmanager:
+  enabled: true
+  configSecret: alertmanager-config
+  configFileName: alertmanager.yaml
+  alertmanagerSpec:
+    replicas: 2
+    retention: 120h
+    podAntiAffinity: soft
+    externalUrl: https://danielgherasim.com/alertmanager
+    storage:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: managed-csi
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 2Gi
+    resources:
+      requests:
+        memory: 128Mi
+        cpu: 100m
+      limits:
+        memory: 256Mi
+        cpu: 200m
+
+grafana:
+  replicas: 1
+  admin:
+    existingSecret: grafana-admin
+    userKey: admin-user
+    passwordKey: admin-password
+  envFromSecret: grafana-oauth
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 200m
+  image:
+    tag: 10.4.5
+  sidecar:
+    dashboards:
+      enabled: true
+      skipTlsVerify: true
+      searchNamespace: ALL
+      provider:
+        disableDelete: false
+    datasources:
+      enabled: true
+      skipTlsVerify: true
+      searchNamespace: ALL
+  persistence:
+    enabled: true
+    storageClassName: managed-csi
+    size: 5Gi
+  grafana.ini:
+    server:
+      serve_from_sub_path: true
+      domain: danielgherasim.com
+      root_url: https://danielgherasim.com/grafana
+    auth:
+      disable_login_form: false
+      oauth_auto_login: false
+      login_maximum_inactive_lifetime_duration: 7d
+      login_maximum_lifetime_duration: 30d
+    security:
+      cookie_secure: true
+      disable_gravatar: true
+      content_security_policy: true
+      strict_transport_security: true
+      strict_transport_security_max_age_seconds: 31536000
+      strict_transport_security_preload: true
+      strict_transport_security_subdomains: true
+      x_content_type_options: true
+      x_xss_protection: true
+    users:
+      allow_sign_up: false
+      auto_assign_org: true
+      auto_assign_org_role: Viewer
+    analytics:
+      reporting_enabled: false
+      check_for_updates: false
+    auth.generic_oauth:
+      enabled: true
+      name: Keycloak
+      allow_sign_up: true
+      client_id: grafana
+      client_secret: $__env{GRAFANA_OIDC_CLIENT_SECRET}
+      scopes: openid profile email
+      auth_url: https://danielgherasim.com/auth/realms/microservices/protocol/openid-connect/auth
+      token_url: https://danielgherasim.com/auth/realms/microservices/protocol/openid-connect/token
+      api_url: https://danielgherasim.com/auth/realms/microservices/protocol/openid-connect/userinfo
+      role_attribute_path: contains(roles[*], 'admin') && 'Admin' || contains(roles[*], 'editor') && 'Editor' || 'Viewer'
+    unified_alerting:
+      enabled: true
+      alertmanagers:
+        alertmanager:
+          name: AlertManager
+          type: alertmanager
+          uid: alertmanager
+          url: http://kube-prometheus-stack-alertmanager.monitoring.svc.cluster.local:9093
+          access: proxy
+          implementation: prometheus
+          handleGrafanaManagedAlerts: true
+    alerting:
+      enabled: false
+    smtp:
+      enabled: true
+      host: smtp.gmail.com:587
+      user: alertmanager@monitoring.local
+      password: $__env{SMTP_PASSWORD}
+      from_address: alertmanager@monitoring.local
+      from_name: Grafana Alert
+      startTLS_policy: MandatoryStartTLS
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: Alertmanager
+          type: alertmanager
+          url: http://kube-prometheus-stack-alertmanager.monitoring.svc.cluster.local:9093
+          access: proxy
+          isDefault: false
+          uid: alertmanager
+          jsonData:
+            implementation: prometheus
+            handleGrafanaManagedAlerts: true
+            manageAlerts: true
+        - name: Loki
+          type: loki
+          url: http://loki:3100/
+          access: proxy
+          isDefault: false
+          uid: Loki
+          editable: true
+          jsonData:
+            alerting: true
+            manageAlerts: true
+  dashboards:
+    monitoring:
+      k8s-views-global:
+        gnetId: 15757
+        revision: 43
+        datasource: Prometheus
+      loki:
+        gnetId: 13639
+        revision: 2
+        datasource: Loki
+      cert-manager:
+        gnetId: 20340
+        revision: 1
+        datasource: Prometheus
+      alert-manager:
+        gnetId: 9578
+        revision: 4
+        datasource: Prometheus
+      postgres:
+        gnetId: 9628
+        revision: 8
+        datasource: Prometheus
+      coredns:
+        gnetId: 14981
+        revision: 2
+        datasource: Prometheus
+
+defaultRules:
+  create: true
+  rules:
+    alertmanager: true
+    general: true
+    k8s: true
+    kubeApiserver: true
+    kubernetesApps: true
+    kubernetesResources: true
+    node: true
+    prometheus: true
+  disabled:
+    KubeControllerManagerDown: true
+    KubeSchedulerDown: true
+
+nodeExporter:
+  enabled: true
+  resources:
+    requests:
+      memory: 32Mi
+      cpu: 25m
+
+prometheusOperator:
+  enabled: true
+  manageCrds: true
+  resources:
+    requests:
+      memory: 64Mi
+      cpu: 50m

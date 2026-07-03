@@ -1,0 +1,27 @@
+provider:
+  name: cloudflare
+
+domainFilters:
+  - danielgherasim.com
+policy: sync
+txtOwnerId: micro-market
+
+env:
+  - name: CF_API_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: cloudflare-api-token
+        key: api-token
+
+serviceAccount:
+  create: true
+  name: external-dns
+  annotations: {}
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi

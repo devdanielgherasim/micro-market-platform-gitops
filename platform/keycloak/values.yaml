@@ -1,0 +1,141 @@
+global:
+  security:
+    allowInsecureImages: false
+
+replicaCount: 1
+production: true
+adminRealm: master
+
+auth:
+  adminUser: admin
+  existingSecret: keycloak-admin
+  passwordSecretKey: password
+
+httpRelativePath: /auth/
+proxyHeaders: xforwarded
+usePasswordFiles: true
+
+extraEnvVars:
+  - name: KEYCLOAK_ADMIN
+    value: admin
+  - name: KEYCLOAK_ADMIN_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: keycloak-admin
+        key: password
+  - name: KC_HOSTNAME
+    value: danielgherasim.com
+  - name: KC_DB
+    value: postgres
+  - name: KC_TRANSACTION_XA_ENABLED
+    value: "true"
+  - name: KC_HTTP_ENABLED
+    value: "true"
+  - name: KEYCLOAK_EXTRA_ARGS
+    value: --import-realm --spi-realm-import-strategy=OVERWRITE_EXISTING
+  - name: KC_FEATURES
+    value: token-exchange,admin-fine-grained-authz
+  - name: KC_HEALTH_ENABLED
+    value: "true"
+  - name: KC_METRICS_ENABLED
+    value: "true"
+  - name: KC_LOG_LEVEL
+    value: info
+  - name: KC_CACHE
+    value: local
+  - name: CATALOG_SERVICE_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: keycloak-client-secrets
+        key: catalog-service-secret
+  - name: ORDERS_SERVICE_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: keycloak-client-secrets
+        key: orders-service-secret
+  - name: AUDIT_SERVICE_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: keycloak-client-secrets
+        key: audit-service-secret
+  - name: ARGOCD_CLIENT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: keycloak-client-secrets
+        key: argocd-client-secret
+  - name: GRAFANA_OIDC_CLIENT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: keycloak-client-secrets
+        key: grafana-client-secret
+
+externalDatabase:
+  host: postgresql.postgresql.svc.cluster.local
+  port: 5432
+  user: postgres
+  database: microservices
+  existingSecret: keycloak-postgresql
+  existingSecretPasswordKey: POSTGRES_PASSWORD
+
+postgresql:
+  enabled: false
+
+service:
+  type: ClusterIP
+  http:
+    enabled: true
+  https:
+    enabled: true
+  ports:
+    http: 80
+    https: 443
+
+resourcesPreset: small
+resources:
+  requests:
+    memory: 400Mi
+    cpu: 400m
+  limits:
+    memory: 800Mi
+    cpu: 800m
+
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    namespace: monitoring
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+networkPolicy:
+  enabled: true
+  allowExternal: true
+  allowExternalEgress: true
+  kubeAPIServerPorts:
+    - 443
+    - 6443
+    - 8443
+
+extraVolumes:
+  - name: realm-config
+    configMap:
+      name: keycloak-realm-config
+
+extraVolumeMounts:
+  - name: realm-config
+    mountPath: /opt/bitnami/keycloak/data/import
+
+customLivenessProbe:
+  httpGet:
+    path: /auth/realms/master
+    port: http
+  initialDelaySeconds: 300
+  periodSeconds: 30
+  timeoutSeconds: 5
+  failureThreshold: 3
+  successThreshold: 1
+
+livenessProbe:
+  enabled: false

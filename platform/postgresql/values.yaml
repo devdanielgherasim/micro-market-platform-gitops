@@ -1,0 +1,70 @@
+global:
+  postgresql:
+    auth:
+      username: postgres
+      database: microservices
+      existingSecret: postgresql-auth
+      secretKeys:
+        adminPasswordKey: postgres-password
+        userPasswordKey: password
+
+architecture: standalone
+
+primary:
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: managed-csi
+  resources:
+    requests:
+      memory: 200Mi
+      cpu: 200m
+    limits:
+      memory: 800Mi
+      cpu: 800m
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: postgresql
+                app.kubernetes.io/instance: postgresql
+            topologyKey: kubernetes.io/hostname
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9187"
+  extraEnvVars:
+    - name: POSTGRESQL_MAX_CONNECTIONS
+      value: "200"
+    - name: POSTGRESQL_SHARED_BUFFERS
+      value: 256MB
+
+readReplicas:
+  replicaCount: 0
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: managed-csi
+  resources:
+    requests:
+      memory: 200Mi
+      cpu: 200m
+    limits:
+      memory: 800Mi
+      cpu: 800m
+
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    namespace: monitoring
+    interval: 30s
+  resources:
+    requests:
+      memory: 25Mi
+      cpu: 40m
+    limits:
+      memory: 50Mi
+      cpu: 80m

@@ -1,0 +1,140 @@
+{{- $root := . -}}
+{{- range $name, $addon := .Values.addons }}
+{{- $cloudAllowed := true -}}
+{{- if hasKey $addon "enabledFor" -}}
+{{- $cloudAllowed = has $root.Values.global.cloudProvider $addon.enabledFor -}}
+{{- end -}}
+{{- if and $addon.enabled $cloudAllowed }}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: {{ printf "platform-%s" $name | quote }}
+  namespace: {{ $root.Values.project.namespace | quote }}
+  annotations:
+    argocd.argoproj.io/sync-wave: {{ $addon.syncWave | default "0" | quote }}
+  labels:
+    app.kubernetes.io/part-of: platform
+    environment: {{ $root.Values.global.environment | quote }}
+    cloud-provider: {{ $root.Values.global.cloudProvider | quote }}
+spec:
+  project: {{ $root.Values.global.project | quote }}
+  {{- if hasKey $addon "path" }}
+  source:
+    repoURL: {{ $root.Values.global.repoURL | quote }}
+    targetRevision: {{ $root.Values.global.targetRevision | quote }}
+    path: {{ $addon.path | quote }}
+    helm:
+      valuesObject:
+        global:
+          cloudProvider: {{ $root.Values.global.cloudProvider | quote }}
+          environment: {{ $root.Values.global.environment | quote }}
+          domain: {{ $root.Values.global.domain | quote }}
+          acmeEmail: {{ $root.Values.global.acmeEmail | quote }}
+          clusterIssuer: {{ $root.Values.global.clusterIssuer | quote }}
+          cloudflareApiTokenSecretName: {{ $root.Values.global.cloudflareApiTokenSecretName | quote }}
+          storageClass:
+{{ toYaml $root.Values.global.storageClass | indent 12 }}
+  {{- else }}
+  sources:
+    - repoURL: {{ $addon.repoURL | quote }}
+      chart: {{ $addon.chart | quote }}
+      targetRevision: {{ $addon.targetRevision | quote }}
+      helm:
+        valueFiles:
+          - {{ printf "$values/%s" $addon.valuesPath | quote }}
+        valuesObject:
+          global:
+            cloudProvider: {{ $root.Values.global.cloudProvider | quote }}
+            environment: {{ $root.Values.global.environment | quote }}
+            domain: {{ $root.Values.global.domain | quote }}
+            acmeEmail: {{ $root.Values.global.acmeEmail | quote }}
+            clusterIssuer: {{ $root.Values.global.clusterIssuer | quote }}
+            cloudflareApiTokenSecretName: {{ $root.Values.global.cloudflareApiTokenSecretName | quote }}
+            storageClass: {{ index $root.Values.global.storageClass $root.Values.global.cloudProvider | quote }}
+          {{ if eq $name "cert-manager" }}
+          ingressShim:
+            defaultIssuerName: {{ $root.Values.global.clusterIssuer | quote }}
+            defaultIssuerKind: ClusterIssuer
+          {{ end }}
+          {{ if eq $name "external-dns" }}
+          domainFilters:
+            - {{ $root.Values.global.domain | quote }}
+          policy: sync
+          txtOwnerId: micro-market
+          env:
+            - name: CF_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $root.Values.global.cloudflareApiTokenSecretName | quote }}
+                  key: api-token
+          {{ end }}
+          {{ if eq $name "ingress-nginx" }}
+          controller:
+            service:
+              externalTrafficPolicy: Local
+              annotations:
+                {{ if eq $root.Values.global.cloudProvider "azure" }}
+                service.beta.kubernetes.io/azure-load-balancer-health-probe-request-path: /healthz
+                {{ else if eq $root.Values.global.cloudProvider "aws" }}
+                service.beta.kubernetes.io/aws-load-balancer-type: external
+                service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
+                service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+                {{ else if eq $root.Values.global.cloudProvider "gcp" }}
+                cloud.google.com/neg: '{"ingress": true}'
+                cloud.google.com/load-balancer-type: External
+                {{ end }}
+          {{ end }}
+          {{ if eq $name "kube-prometheus-stack" }}
+          prometheus:
+            prometheusSpec:
+              externalLabels:
+                cluster: {{ $root.Values.global.environment | quote }}
+                environment: {{ $root.Values.global.environment | quote }}
+              storageSpec:
+                volumeClaimTemplate:
+                  spec:
+                    storageClassName: {{ index $root.Values.global.storageClass $root.Values.global.cloudProvider | quote }}
+          alertmanager:
+            alertmanagerSpec:
+              externalUrl: {{ printf "https://%s/alertmanager" $root.Values.global.domain | quote }}
+              storage:
+                volumeClaimTemplate:
+                  spec:
+                    storageClassName: {{ index $root.Values.global.storageClass $root.Values.global.cloudProvider | quote }}
+          grafana:
+            persistence:
+              storageClassName: {{ index $root.Values.global.storageClass $root.Values.global.cloudProvider | quote }}
+            grafana.ini:
+              server:
+                domain: {{ $root.Values.global.domain | quote }}
+                root_url: {{ printf "https://%s/grafana" $root.Values.global.domain | quote }}
+              auth.generic_oauth:
+                auth_url: {{ printf "https://%s/auth/realms/microservices/protocol/openid-connect/auth" $root.Values.global.domain | quote }}
+                token_url: {{ printf "https://%s/auth/realms/microservices/protocol/openid-connect/token" $root.Values.global.domain | quote }}
+                api_url: {{ printf "https://%s/auth/realms/microservices/protocol/openid-connect/userinfo" $root.Values.global.domain | quote }}
+          {{ end }}
+          {{ if eq $name "postgresql" }}
+          primary:
+            persistence:
+              storageClass: {{ index $root.Values.global.storageClass $root.Values.global.cloudProvider | quote }}
+          readReplicas:
+            persistence:
+              storageClass: {{ index $root.Values.global.storageClass $root.Values.global.cloudProvider | quote }}
+          {{ end }}
+    - repoURL: {{ $root.Values.global.repoURL | quote }}
+      targetRevision: {{ $root.Values.global.targetRevision | quote }}
+      ref: values
+  {{- end }}
+  destination:
+    server: {{ $root.Values.global.destinationServer | quote }}
+    namespace: {{ $addon.namespace | quote }}
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+{{- end }}
+{{- end }}

@@ -1,0 +1,96 @@
+installCRDs: true
+replicaCount: 1
+
+webhook:
+  replicaCount: 1
+  securePort: 10250
+  hostNetwork: false
+  securityContext:
+    enabled: true
+  extraArgs:
+    - --v=5
+  timeoutSeconds: 30
+  resources:
+    requests:
+      cpu: 40m
+      memory: 50Mi
+    limits:
+      cpu: 80m
+      memory: 100Mi
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+                - key: app.kubernetes.io/name
+                  operator: In
+                  values:
+                    - webhook
+            topologyKey: kubernetes.io/hostname
+
+cainjector:
+  enabled: true
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 40m
+      memory: 50Mi
+    limits:
+      cpu: 80m
+      memory: 100Mi
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+                - key: app.kubernetes.io/name
+                  operator: In
+                  values:
+                    - cainjector
+            topologyKey: kubernetes.io/hostname
+
+startupapicheck:
+  enabled: false
+  timeout: 5m
+
+ingressShim:
+  defaultIssuerName: letsencrypt-cloudflare-dns
+  defaultIssuerKind: ClusterIssuer
+
+prometheus:
+  enabled: true
+  servicemonitor:
+    enabled: true
+    prometheusInstance: kube-prometheus-stack
+    interval: 30s
+    scrapeTimeout: 10s
+
+resources:
+  requests:
+    cpu: 80m
+    memory: 100Mi
+  limits:
+    cpu: 160m
+    memory: 200Mi
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - cert-manager
+          topologyKey: kubernetes.io/hostname
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/path: /metrics
+  prometheus.io/port: "9402"

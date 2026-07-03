@@ -1,0 +1,18 @@
+.idea/
+.vscode/
+.DS_Store
+
+# Local render/test output
+*.rendered.yaml
+tmp/
+
+# Credentials must never live in GitOps source.
+.env
+.env.*
+*-credentials*.json
+*service-account*.json
+*-key.json
+i-binder-*.json
+*.pem
+*.p12
+*.pfx

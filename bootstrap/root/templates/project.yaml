@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: {{ .Values.global.project | quote }}
+  namespace: {{ .Values.project.namespace | quote }}
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io/finalizer
+spec:
+  description: Platform add-ons managed by Argo CD
+  sourceRepos:
+    - {{ .Values.global.repoURL | quote }}
+    - https://aws.github.io/eks-charts
+    - https://charts.jetstack.io
+    - https://charts.external-secrets.io
+    - https://charts.bitnami.com/bitnami
+    - https://grafana.github.io/helm-charts
+    - https://kubernetes.github.io/ingress-nginx
+    - https://kubernetes-sigs.github.io/external-dns/
+    - https://prometheus-community.github.io/helm-charts
+  destinations:
+    - namespace: '*'
+      server: {{ .Values.global.destinationServer | quote }}
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'

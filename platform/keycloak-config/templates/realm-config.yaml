@@ -1,0 +1,115 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keycloak-realm-config
+data:
+  microservices-realm.json: |
+    {
+      "realm": "microservices",
+      "enabled": true,
+      "sslRequired": "external",
+      "registrationAllowed": false,
+      "resetPasswordAllowed": true,
+      "editUsernameAllowed": false,
+      "bruteForceProtected": true,
+      "permanentLockout": false,
+      "failureFactor": 5,
+      "roles": {
+        "realm": [
+          { "name": "user", "description": "User role" },
+          { "name": "admin", "description": "Administrator role" },
+          { "name": "editor", "description": "Editor role for Grafana" }
+        ]
+      },
+      "groups": [
+        { "name": "admin", "path": "/admin", "realmRoles": ["admin"], "clientRoles": {}, "subGroups": [] },
+        { "name": "editor", "path": "/editor", "realmRoles": ["editor"], "clientRoles": {}, "subGroups": [] },
+        { "name": "user", "path": "/user", "realmRoles": ["user"], "clientRoles": {}, "subGroups": [] }
+      ],
+      "clients": [
+        {
+          "clientId": "micro-market-frontend",
+          "enabled": true,
+          "clientAuthenticatorType": "none",
+          "redirectUris": ["https://{{ .Values.global.domain }}/*"],
+          "webOrigins": ["https://{{ .Values.global.domain }}"],
+          "rootUrl": "https://{{ .Values.global.domain }}",
+          "baseUrl": "/",
+          "publicClient": true,
+          "protocol": "openid-connect",
+          "fullScopeAllowed": true,
+          "directAccessGrantsEnabled": false,
+          "standardFlowEnabled": true,
+          "implicitFlowEnabled": false,
+          "serviceAccountsEnabled": false,
+          "defaultClientScopes": ["web-origins", "profile", "roles", "email", "account", "account-console"],
+          "optionalClientScopes": ["address", "phone", "offline_access", "microprofile-jwt"]
+        },
+        {
+          "clientId": "catalog-service",
+          "enabled": true,
+          "clientAuthenticatorType": "client-secret",
+          "secret": "${CATALOG_SERVICE_SECRET}",
+          "redirectUris": ["https://catalog.catalog.svc.cluster.local/*", "https://{{ .Values.global.domain }}/*"],
+          "webOrigins": ["https://catalog.catalog.svc.cluster.local", "https://{{ .Values.global.domain }}"],
+          "rootUrl": "https://catalog.catalog.svc.cluster.local",
+          "baseUrl": "/",
+          "publicClient": false,
+          "protocol": "openid-connect",
+          "fullScopeAllowed": true,
+          "serviceAccountsEnabled": true
+        },
+        {
+          "clientId": "audit-service",
+          "enabled": true,
+          "clientAuthenticatorType": "client-secret",
+          "secret": "${AUDIT_SERVICE_SECRET}",
+          "redirectUris": ["https://audit.microservices.svc.cluster.local/*", "https://{{ .Values.global.domain }}/*"],
+          "webOrigins": ["https://audit.microservices.svc.cluster.local", "https://{{ .Values.global.domain }}"],
+          "rootUrl": "http://audit-service.microservices.svc.cluster.local",
+          "baseUrl": "/",
+          "publicClient": false,
+          "protocol": "openid-connect",
+          "fullScopeAllowed": true,
+          "serviceAccountsEnabled": true
+        },
+        {
+          "clientId": "orders-service",
+          "enabled": true,
+          "clientAuthenticatorType": "client-secret",
+          "secret": "${ORDERS_SERVICE_SECRET}",
+          "redirectUris": ["https://orders.orders.svc.cluster.local/*", "https://{{ .Values.global.domain }}/*"],
+          "webOrigins": ["https://orders.orders.svc.cluster.local", "https://{{ .Values.global.domain }}"],
+          "rootUrl": "http://orders-service.orders.svc.cluster.local",
+          "baseUrl": "/",
+          "publicClient": false,
+          "protocol": "openid-connect",
+          "fullScopeAllowed": true,
+          "serviceAccountsEnabled": true
+        },
+        {
+          "clientId": "argocd",
+          "enabled": true,
+          "clientAuthenticatorType": "client-secret",
+          "secret": "${ARGOCD_CLIENT_SECRET}",
+          "redirectUris": ["https://{{ .Values.global.domain }}/argocd/auth/callback"],
+          "webOrigins": ["https://{{ .Values.global.domain }}"],
+          "rootUrl": "https://{{ .Values.global.domain }}",
+          "baseUrl": "/argocd",
+          "publicClient": false,
+          "protocol": "openid-connect"
+        },
+        {
+          "clientId": "grafana",
+          "enabled": true,
+          "clientAuthenticatorType": "client-secret",
+          "secret": "${GRAFANA_OIDC_CLIENT_SECRET}",
+          "redirectUris": ["https://{{ .Values.global.domain }}/grafana/login/generic_oauth"],
+          "webOrigins": ["https://{{ .Values.global.domain }}"],
+          "rootUrl": "https://{{ .Values.global.domain }}/grafana",
+          "baseUrl": "/",
+          "publicClient": false,
+          "protocol": "openid-connect"
+        }
+      ]
+    }
