@@ -1,0 +1,42 @@
+# CI-only values overlay for the 8 "local" charts referenced by `path:` in
+# bootstrap/root/values.yaml `addons.*` (storage-class, cert-manager-config,
+# gateway, external-secrets-config, monitoring-config, postgres-cluster,
+# keycloak, keycloak-config), bootstrap/root itself, and (as a best-effort
+# extra, see ci/render-upstream-charts.sh) the upstream charts ArgoCD pulls
+# directly for the other addons.
+#
+# In real syncs, ArgoCD's Application injects `global.*` as
+# `helm.valuesObject` at sync time -- see
+# bootstrap/root/templates/applications.yaml lines 27-39 (path-based addons)
+# and lines 66-74 (upstream-chart addons, where `storageClass` is a single
+# string indexed by cloud provider rather than the full map -- harmless
+# either way since unused keys are simply ignored by charts that don't
+# reference them). Several local charts (storage-class, cert-manager-config,
+# gateway, monitoring-config) have *no* values.yaml of their own at all and
+# rely entirely on that injection; standalone `helm lint`/`helm template` in
+# CI has no ArgoCD to do it, so this file reproduces the same shape ArgoCD
+# would inject, using the same defaults as bootstrap/root/values.yaml's own
+# `global` block (azure/dev, matching this project's primary cloud target).
+# Not used by ArgoCD/Helm in real syncs -- CI-only, referenced explicitly via
+# `-f ci/global-values.yaml` in .gitlab-ci.yml.
+#
+# Deliberately does NOT include the `aws`/`azure`/`gcp` secretStores block
+# ArgoCD additionally injects for external-secrets-config only (see
+# applications.yaml lines 40-55) -- several upstream charts (e.g.
+# cert-manager) ship a strict values.schema.json that rejects unrecognized
+# top-level keys, so bundling secretStores in here would break every other
+# chart's `helm template`. That block lives in its own
+# ci/secret-stores-values.yaml, applied only when rendering
+# external-secrets-config.
+global:
+  cloudProvider: azure
+  environment: dev
+  domain: danielgherasim.com
+  authDomain: auth.danielgherasim.com
+  acmeEmail: admin@danielgherasim.com
+  clusterIssuer: letsencrypt-cloudflare-dns
+  cloudflareApiTokenSecretName: cloudflare-api-token
+  storageClass:
+    aws: gp3
+    azure: managed-csi
+    gcp: standard-rwo

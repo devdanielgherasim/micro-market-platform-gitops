@@ -1,0 +1,4 @@
+defaultRevision: default
+
+global:
+  istioNamespace: istio-system

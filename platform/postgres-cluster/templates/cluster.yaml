@@ -1,0 +1,45 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ .Values.cluster.name | quote }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/part-of: platform
+    environment: {{ .Values.global.environment | quote }}
+spec:
+  instances: {{ .Values.cluster.instances }}
+  imageName: {{ .Values.cluster.imageName | quote }}
+  enableSuperuserAccess: false
+
+  storage:
+    size: {{ .Values.cluster.size | quote }}
+    storageClass: {{ index .Values.global.storageClass .Values.global.cloudProvider | quote }}
+
+  resources:
+{{ toYaml .Values.cluster.resources | indent 4 }}
+
+  monitoring:
+    enablePodMonitor: true
+
+  bootstrap:
+    initdb:
+      database: {{ .Values.cluster.database | quote }}
+      owner: {{ .Values.cluster.owner | quote }}
+      secret:
+        name: {{ .Values.cluster.ownerSecret | quote }}
+      postInitSQL:
+        {{- range .Values.cluster.databases }}
+        - CREATE ROLE {{ .owner }};
+        - CREATE DATABASE {{ .name }} OWNER {{ .owner }};
+        {{- end }}
+
+  managed:
+    roles:
+      {{- range .Values.cluster.roles }}
+      - name: {{ .name | quote }}
+        ensure: present
+        login: true
+        passwordSecret:
+          name: {{ .passwordSecret | quote }}
+      {{- end }}

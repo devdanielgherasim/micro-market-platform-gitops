@@ -1,0 +1,44 @@
+deployment:
+  accessible_namespaces:
+    - '**'
+  ingress_enabled: false
+  env:
+    - name: KIALI_AUTH_OPENID_CLIENT_SECRET
+      valueFrom:
+        secretKeyRef:
+          name: keycloak-client-secrets
+          key: kiali-client-secret
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 512Mi
+
+auth:
+  strategy: openid
+  openid:
+    client_id: kiali
+    issuer_uri: https://auth.danielgherasim.com/auth/realms/microservices
+    username_claim: preferred_username
+    scopes:
+      - openid
+      - profile
+      - email
+    disable_rbac: false
+
+external_services:
+  prometheus:
+    url: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
+  grafana:
+    enabled: true
+    in_cluster_url: http://kube-prometheus-stack-grafana.monitoring.svc.cluster.local
+    url: https://danielgherasim.com/grafana
+  tracing:
+    enabled: false
+  istio:
+    root_namespace: istio-system
+
+server:
+  web_root: /kiali

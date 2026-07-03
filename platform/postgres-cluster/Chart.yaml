@@ -1,0 +1,6 @@
+apiVersion: v2
+name: postgres-cluster
+description: CloudNativePG cluster and compatibility service for Micro Market
+type: application
+version: 0.1.0
+appVersion: "16"

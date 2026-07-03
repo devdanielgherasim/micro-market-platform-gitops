@@ -1,6 +1,5 @@
 apiVersion: v2
 name: keycloak-config
-description: Interim Keycloak realm import ConfigMap for Bitnami Keycloak
+description: keycloak-config-cli realm synchronization for Micro Market
 type: application
 version: 0.1.0
-appVersion: "0.1.0"

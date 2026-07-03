@@ -1,6 +1,0 @@
-apiVersion: v2
-name: platform-ingresses
-description: Temporary nginx ingresses for platform UIs until Gateway API migration
-type: application
-version: 0.1.0
-appVersion: "0.1.0"

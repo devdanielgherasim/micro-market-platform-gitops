@@ -2,10 +2,14 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: keycloak-realm-config
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    app.kubernetes.io/name: keycloak-config
+    app.kubernetes.io/part-of: platform
 data:
   microservices-realm.json: |
     {
-      "realm": "microservices",
+      "realm": {{ .Values.realm.name | quote }},
       "enabled": true,
       "sslRequired": "external",
       "registrationAllowed": false,
@@ -13,27 +17,40 @@ data:
       "editUsernameAllowed": false,
       "bruteForceProtected": true,
       "permanentLockout": false,
-      "failureFactor": 5,
+      "failureFactor": {{ .Values.realm.bruteForce.failureFactor }},
+      "waitIncrementSeconds": {{ .Values.realm.bruteForce.waitIncrementSeconds }},
+      "maxFailureWaitSeconds": {{ .Values.realm.bruteForce.maxFailureWaitSeconds }},
+      "accessTokenLifespan": {{ .Values.realm.accessTokenLifespan }},
+      "ssoSessionIdleTimeout": {{ .Values.realm.ssoSessionIdleTimeout }},
+      "ssoSessionMaxLifespan": {{ .Values.realm.ssoSessionMaxLifespan }},
+      "otpPolicyType": "totp",
+      "otpPolicyAlgorithm": "HmacSHA1",
+      "otpPolicyDigits": 6,
+      "otpPolicyPeriod": 30,
       "roles": {
         "realm": [
           { "name": "user", "description": "User role" },
           { "name": "admin", "description": "Administrator role" },
-          { "name": "editor", "description": "Editor role for Grafana" }
+          { "name": "editor", "description": "Editor role for Grafana" },
+          { "name": "kiali-admin", "description": "Kiali administrator role" }
         ]
       },
       "groups": [
-        { "name": "admin", "path": "/admin", "realmRoles": ["admin"], "clientRoles": {}, "subGroups": [] },
+        { "name": "admin", "path": "/admin", "realmRoles": ["admin", "kiali-admin"], "clientRoles": {}, "subGroups": [] },
         { "name": "editor", "path": "/editor", "realmRoles": ["editor"], "clientRoles": {}, "subGroups": [] },
         { "name": "user", "path": "/user", "realmRoles": ["user"], "clientRoles": {}, "subGroups": [] }
       ],
+      "requiredActions": [
+        { "alias": "CONFIGURE_TOTP", "name": "Configure OTP", "providerId": "CONFIGURE_TOTP", "enabled": true, "defaultAction": false, "priority": 10 }
+      ],
       "clients": [
         {
-          "clientId": "micro-market-frontend",
+          "clientId": {{ .Values.realm.frontendClientId | quote }},
           "enabled": true,
           "clientAuthenticatorType": "none",
-          "redirectUris": ["https://{{ .Values.global.domain }}/*"],
-          "webOrigins": ["https://{{ .Values.global.domain }}"],
-          "rootUrl": "https://{{ .Values.global.domain }}",
+          "redirectUris": {{ toJson .Values.realm.frontendRedirectUris }},
+          "webOrigins": {{ toJson .Values.realm.frontendWebOrigins }},
+          "rootUrl": {{ printf "https://%s" .Values.global.domain | quote }},
           "baseUrl": "/",
           "publicClient": true,
           "protocol": "openid-connect",
@@ -50,10 +67,20 @@ data:
           "enabled": true,
           "clientAuthenticatorType": "client-secret",
           "secret": "${CATALOG_SERVICE_SECRET}",
-          "redirectUris": ["https://catalog.catalog.svc.cluster.local/*", "https://{{ .Values.global.domain }}/*"],
-          "webOrigins": ["https://catalog.catalog.svc.cluster.local", "https://{{ .Values.global.domain }}"],
-          "rootUrl": "https://catalog.catalog.svc.cluster.local",
-          "baseUrl": "/",
+          "redirectUris": ["https://catalog.microservices.svc.cluster.local/*", "https://{{ .Values.global.domain }}/*"],
+          "webOrigins": ["https://catalog.microservices.svc.cluster.local", "https://{{ .Values.global.domain }}"],
+          "publicClient": false,
+          "protocol": "openid-connect",
+          "fullScopeAllowed": true,
+          "serviceAccountsEnabled": true
+        },
+        {
+          "clientId": "orders-service",
+          "enabled": true,
+          "clientAuthenticatorType": "client-secret",
+          "secret": "${ORDERS_SERVICE_SECRET}",
+          "redirectUris": ["https://orders.microservices.svc.cluster.local/*", "https://{{ .Values.global.domain }}/*"],
+          "webOrigins": ["https://orders.microservices.svc.cluster.local", "https://{{ .Values.global.domain }}"],
           "publicClient": false,
           "protocol": "openid-connect",
           "fullScopeAllowed": true,
@@ -66,22 +93,6 @@ data:
           "secret": "${AUDIT_SERVICE_SECRET}",
           "redirectUris": ["https://audit.microservices.svc.cluster.local/*", "https://{{ .Values.global.domain }}/*"],
           "webOrigins": ["https://audit.microservices.svc.cluster.local", "https://{{ .Values.global.domain }}"],
-          "rootUrl": "http://audit-service.microservices.svc.cluster.local",
-          "baseUrl": "/",
-          "publicClient": false,
-          "protocol": "openid-connect",
-          "fullScopeAllowed": true,
-          "serviceAccountsEnabled": true
-        },
-        {
-          "clientId": "orders-service",
-          "enabled": true,
-          "clientAuthenticatorType": "client-secret",
-          "secret": "${ORDERS_SERVICE_SECRET}",
-          "redirectUris": ["https://orders.orders.svc.cluster.local/*", "https://{{ .Values.global.domain }}/*"],
-          "webOrigins": ["https://orders.orders.svc.cluster.local", "https://{{ .Values.global.domain }}"],
-          "rootUrl": "http://orders-service.orders.svc.cluster.local",
-          "baseUrl": "/",
           "publicClient": false,
           "protocol": "openid-connect",
           "fullScopeAllowed": true,
@@ -110,6 +121,45 @@ data:
           "baseUrl": "/",
           "publicClient": false,
           "protocol": "openid-connect"
+        },
+        {
+          "clientId": "kiali",
+          "enabled": true,
+          "clientAuthenticatorType": "client-secret",
+          "secret": "${KIALI_CLIENT_SECRET}",
+          "redirectUris": ["https://{{ .Values.global.domain }}/kiali/*"],
+          "webOrigins": ["https://{{ .Values.global.domain }}"],
+          "rootUrl": "https://{{ .Values.global.domain }}/kiali",
+          "baseUrl": "/kiali",
+          "publicClient": false,
+          "protocol": "openid-connect"
         }
-      ]
+      ]{{- if .Values.realm.demoUsers.enabled }},
+      "users": [
+        {
+          "username": "admin.demo",
+          "enabled": true,
+          "emailVerified": true,
+          "firstName": "Admin",
+          "lastName": "Demo",
+          "groups": ["/admin"],
+          "requiredActions": ["CONFIGURE_TOTP"]
+        },
+        {
+          "username": "editor.demo",
+          "enabled": true,
+          "emailVerified": true,
+          "firstName": "Editor",
+          "lastName": "Demo",
+          "groups": ["/editor"]
+        },
+        {
+          "username": "user.demo",
+          "enabled": true,
+          "emailVerified": true,
+          "firstName": "User",
+          "lastName": "Demo",
+          "groups": ["/user"]
+        }
+      ]{{- end }}
     }

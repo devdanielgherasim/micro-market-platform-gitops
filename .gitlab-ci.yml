@@ -1,0 +1,136 @@
+# CI gates for the platform add-on GitOps repo (bootstrap/root app-of-apps +
+# platform/<addon>/ per-addon charts/values).
+#
+# Design notes (see plans/2026-07-03-helm-k8s-ci-gates.md for the full
+# writeup):
+#   - platform/<addon> splits into two kinds. "Local" charts (referenced by
+#     `path:` in bootstrap/root/values.yaml addons.*: storage-class,
+#     cert-manager-config, gateway, external-secrets-config,
+#     monitoring-config, postgres-cluster, keycloak, keycloak-config) have a
+#     real Chart.yaml + templates/ and get linted/templated directly.
+#     "Upstream-chart" addons (cert-manager, istio-base/cni/istiod, ztunnel,
+#     kiali, external-dns, external-secrets, kube-prometheus-stack, loki,
+#     tempo, alloy, cloudnative-pg, keycloak-operator,
+#     aws-load-balancer-controller) contain *only* a values.yaml -- ArgoCD
+#     pulls the real chart from the upstream Helm repo at sync time and uses
+#     that file as a `valueFiles` overlay (see
+#     bootstrap/root/templates/applications.yaml). There's no chart to lint
+#     there, so `helm-template` additionally runs
+#     ci/render-upstream-charts.sh, which pulls each pinned upstream chart
+#     and renders it against the local values.yaml -- giving real coverage of
+#     the manifests ArgoCD actually deploys (Prometheus/Grafana pod specs,
+#     cert-manager controller, Istio control plane, etc.), which is where
+#     most of the checkov-relevant container security surface lives.
+#   - None of the 9 local charts declare a Chart.yaml `dependencies:` block,
+#     so `helm dependency build` is a no-op today; still run defensively.
+#   - Several local charts (storage-class, cert-manager-config, gateway,
+#     monitoring-config) have no values.yaml at all and render
+#     `.Values.global.*` purely from what ArgoCD injects at sync time (see
+#     applications.yaml). ci/global-values.yaml supplies the same shape for
+#     CI. external-secrets-config additionally needs
+#     ci/secret-stores-values.yaml (kept separate because several upstream
+#     charts, e.g. cert-manager, have a strict values.schema.json that
+#     rejects the extra aws/azure/gcp keys).
+#   - Three focused jobs share a `rendered/` artifact: alpine/helm for
+#     lint+template, kubeconform's own image, checkov's own image.
+
+stages:
+  - lint
+  - template
+  - scan
+
+variables:
+  LOCAL_CHARTS: "bootstrap/root platform/storage-class platform/cert-manager-config platform/gateway platform/external-secrets-config platform/monitoring-config platform/postgres-cluster platform/keycloak platform/keycloak-config"
+
+helm-lint:
+  stage: lint
+  image:
+    name: alpine/helm:3.16.3
+    entrypoint: [""]
+  script:
+    - |
+      set -eu
+      for chart in $LOCAL_CHARTS; do
+        echo "== helm dependency build: $chart (no-op unless Chart.yaml gains a dependencies: block) =="
+        helm dependency build "$chart" || true
+        extra=""
+        case "$chart" in
+          */external-secrets-config) extra="-f ci/secret-stores-values.yaml" ;;
+        esac
+        echo "== helm lint: $chart =="
+        helm lint "$chart" -f ci/global-values.yaml $extra
+      done
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH'
+
+helm-template:
+  stage: template
+  image:
+    name: alpine/helm:3.16.3
+    entrypoint: [""]
+  needs:
+    - helm-lint
+  script:
+    - |
+      set -eu
+      mkdir -p rendered/local
+      for chart in $LOCAL_CHARTS; do
+        name=$(basename "$chart")
+        extra=""
+        case "$chart" in
+          */external-secrets-config) extra="-f ci/secret-stores-values.yaml" ;;
+        esac
+        helm template "$chart" -f ci/global-values.yaml $extra --namespace "$name" --output-dir "rendered/local/$name"
+      done
+      sh ci/render-upstream-charts.sh rendered/upstream
+  artifacts:
+    paths:
+      - rendered/
+    expire_in: 1 day
+    when: always
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH'
+
+kubeconform:
+  stage: scan
+  image:
+    name: ghcr.io/yannh/kubeconform:latest-alpine
+    entrypoint: [""]
+  needs:
+    - helm-template
+  script:
+    - |
+      set -eu
+      # -ignore-missing-schemas: deliberate default, not an oversight. This
+      # repo renders CRDs from several third-party operators (cert-manager
+      # Certificate/ClusterIssuer, Gateway API Gateway/HTTPRoute, Keycloak
+      # Operator Keycloak/KeycloakRealmImport, CloudNativePG Cluster, Istio's
+      # own CRDs) that kubeconform's built-in Kubernetes schema set doesn't
+      # know. The datreeio/CRDs-catalog schema-location below covers what it
+      # has (Gateway API, cert-manager, several others); anything neither
+      # source recognizes is skipped rather than failing the pipeline on a
+      # schema kubeconform simply doesn't ship. Core K8s/apps/networking
+      # kinds (Deployment, Service, ConfigMap, Job, DaemonSet, StatefulSet,
+      # NetworkPolicy, ServiceAccount, Namespace, Pod, HTTPRoute) are always
+      # validated strictly and DO fail the pipeline on a real error.
+      kubeconform \
+        -ignore-missing-schemas \
+        -schema-location default \
+        -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
+        -summary \
+        -verbose \
+        rendered
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH'
+
+checkov:
+  stage: scan
+  image:
+    name: bridgecrew/checkov:latest
+    entrypoint: [""]
+  needs:
+    - helm-template
+  script:
+    - checkov -d rendered --framework kubernetes --compact --config-file .checkov.yaml
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH'

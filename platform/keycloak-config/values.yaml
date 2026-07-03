@@ -1,0 +1,38 @@
+global:
+  domain: danielgherasim.com
+  authDomain: auth.danielgherasim.com
+  environment: dev
+
+keycloak:
+  url: http://keycloak-service.keycloak.svc.cluster.local:8080/auth
+  adminSecret:
+    name: keycloak-admin
+    passwordKey: password
+  clientSecrets:
+    name: keycloak-client-secrets
+
+sync:
+  image: adorsys/keycloak-config-cli:6.4.0-26.0.5
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 600
+
+realm:
+  name: microservices
+  frontendClientId: micro-market-frontend
+  frontendRedirectUris:
+    - https://danielgherasim.com/*
+    - https://dev.danielgherasim.com/*
+    - https://staging.danielgherasim.com/*
+  frontendWebOrigins:
+    - https://danielgherasim.com
+    - https://dev.danielgherasim.com
+    - https://staging.danielgherasim.com
+  accessTokenLifespan: 900
+  ssoSessionIdleTimeout: 1800
+  ssoSessionMaxLifespan: 28800
+  bruteForce:
+    failureFactor: 5
+    waitIncrementSeconds: 60
+    maxFailureWaitSeconds: 900
+  demoUsers:
+    enabled: true

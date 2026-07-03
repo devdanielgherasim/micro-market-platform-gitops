@@ -1,0 +1,29 @@
+global:
+  cloudProvider: azure
+  environment: dev
+  domain: danielgherasim.com
+
+aws:
+  region: us-east-1
+  serviceAccount:
+    name: external-secrets
+    namespace: external-secrets
+  secretPrefix: danielgherasim-microservices/dev
+
+azure:
+  vaultUrl: ""
+  tenantId: ""
+  externalSecretsClientId: ""
+  serviceAccount:
+    name: external-secrets
+    namespace: external-secrets
+
+gcp:
+  projectId: ""
+  clusterLocation: europe-west3-a
+  clusterName: ""
+  serviceAccount:
+    name: external-secrets
+    namespace: external-secrets
+    gcpServiceAccount: ""
+  secretPrefix: danielgherasim-microservices-dev

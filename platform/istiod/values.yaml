@@ -1,0 +1,22 @@
+profile: ambient
+
+global:
+  istioNamespace: istio-system
+
+pilot:
+  env:
+    PILOT_ENABLE_AMBIENT: "true"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 1024Mi
+
+meshConfig:
+  accessLogFile: /dev/stdout
+  defaultConfig:
+    proxyMetadata:
+      ISTIO_META_DNS_CAPTURE: "true"
+      ISTIO_META_ENABLE_HBONE: "true"

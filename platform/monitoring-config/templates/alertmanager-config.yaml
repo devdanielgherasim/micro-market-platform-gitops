@@ -1,24 +1,29 @@
-apiVersion: v1
-kind: Secret
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
 metadata:
-  name: alertmanager-config
+  name: platform-email
+  namespace: monitoring
   labels:
+    alertmanagerConfig: platform
     app.kubernetes.io/part-of: monitoring
-type: Opaque
-stringData:
-  alertmanager.yaml: |
-    global:
-      smtp_smarthost: smtp.gmail.com:587
-      smtp_from: alertmanager@monitoring.local
-      smtp_auth_username: alertmanager@monitoring.local
-      smtp_auth_password: '${SMTP_PASSWORD}'
-      smtp_require_tls: true
-    route:
-      group_by: ['alertname', 'cluster', 'service']
-      group_wait: 30s
-      group_interval: 5m
-      repeat_interval: 4h
-      receiver: default
-    receivers:
-      - name: default
-        email_configs: []
+spec:
+  route:
+    groupBy:
+      - alertname
+      - cluster
+      - namespace
+    groupWait: 30s
+    groupInterval: 5m
+    repeatInterval: 4h
+    receiver: platform-email
+  receivers:
+    - name: platform-email
+      emailConfigs:
+        - to: alertmanager@monitoring.local
+          from: alertmanager@monitoring.local
+          smarthost: smtp.gmail.com:587
+          authUsername: alertmanager@monitoring.local
+          authPassword:
+            name: alertmanager-smtp
+            key: SMTP_PASSWORD
+          requireTLS: true

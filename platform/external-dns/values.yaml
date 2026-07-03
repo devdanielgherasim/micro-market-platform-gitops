@@ -1,6 +1,10 @@
 provider:
   name: cloudflare
 
+sources:
+  - gateway-httproute
+  - service
+
 domainFilters:
   - danielgherasim.com
 policy: sync

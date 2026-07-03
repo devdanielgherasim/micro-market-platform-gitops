@@ -1,0 +1,41 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: public-gateway
+  namespace: istio-ingress
+  labels:
+    app.kubernetes.io/part-of: platform
+spec:
+  gatewayClassName: istio
+  listeners:
+    - name: https
+      hostname: {{ .Values.global.domain | quote }}
+      port: 443
+      protocol: HTTPS
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: platform-gateway-tls
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: https-wildcard
+      hostname: {{ printf "*.%s" .Values.global.domain | quote }}
+      port: 443
+      protocol: HTTPS
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: platform-gateway-tls
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: http
+      hostname: {{ .Values.global.domain | quote }}
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: All

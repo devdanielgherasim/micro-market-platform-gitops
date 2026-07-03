@@ -33,12 +33,16 @@ prometheus:
 
 alertmanager:
   enabled: true
-  configSecret: alertmanager-config
-  configFileName: alertmanager.yaml
   alertmanagerSpec:
     replicas: 2
     retention: 120h
     podAntiAffinity: soft
+    alertmanagerConfigSelector:
+      matchLabels:
+        alertmanagerConfig: platform
+    alertmanagerConfigNamespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: monitoring
     externalUrl: https://danielgherasim.com/alertmanager
     storage:
       volumeClaimTemplate:
@@ -122,9 +126,9 @@ grafana:
       client_id: grafana
       client_secret: $__env{GRAFANA_OIDC_CLIENT_SECRET}
       scopes: openid profile email
-      auth_url: https://danielgherasim.com/auth/realms/microservices/protocol/openid-connect/auth
-      token_url: https://danielgherasim.com/auth/realms/microservices/protocol/openid-connect/token
-      api_url: https://danielgherasim.com/auth/realms/microservices/protocol/openid-connect/userinfo
+      auth_url: https://auth.danielgherasim.com/auth/realms/microservices/protocol/openid-connect/auth
+      token_url: https://auth.danielgherasim.com/auth/realms/microservices/protocol/openid-connect/token
+      api_url: https://auth.danielgherasim.com/auth/realms/microservices/protocol/openid-connect/userinfo
       role_attribute_path: contains(roles[*], 'admin') && 'Admin' || contains(roles[*], 'editor') && 'Editor' || 'Viewer'
     unified_alerting:
       enabled: true
@@ -171,6 +175,33 @@ grafana:
           jsonData:
             alerting: true
             manageAlerts: true
+            derivedFields:
+              - datasourceUid: Tempo
+                matcherRegex: '"trace_id":"([a-f0-9]+)"'
+                name: TraceID
+                url: '$${__value.raw}'
+        - name: Tempo
+          type: tempo
+          url: http://tempo:3100
+          access: proxy
+          isDefault: false
+          uid: Tempo
+          editable: true
+          jsonData:
+            httpMethod: GET
+            serviceMap:
+              datasourceUid: Prometheus
+            tracesToLogsV2:
+              datasourceUid: Loki
+              spanStartTimeShift: -5m
+              spanEndTimeShift: 5m
+              tags:
+                - key: service.name
+                  value: app
+                - key: k8s.namespace.name
+                  value: namespace
+              filterByTraceID: true
+              filterBySpanID: false
   dashboards:
     monitoring:
       k8s-views-global:
@@ -197,6 +228,10 @@ grafana:
         gnetId: 14981
         revision: 2
         datasource: Prometheus
+      tempo:
+        gnetId: 16443
+        revision: 2
+        datasource: Tempo
 
 defaultRules:
   create: true
@@ -209,6 +244,16 @@ defaultRules:
     kubernetesResources: true
     node: true
     prometheus: true
+    # Managed control planes (AKS/EKS/GKE) don't expose
+    # kube-controller-manager/kube-scheduler for scraping, so these two
+    # PrometheusRule groups render with no usable rules content anyway (the
+    # individual *Down alerts below were already disabled for the same
+    # reason) -- turning the groups off outright avoids shipping an empty
+    # ruleset. (Chart's actual value key for the scheduler alerting group is
+    # `kubeSchedulerAlerting`, not `kubeScheduler` -- verified against
+    # kube-prometheus-stack 75.3.0's own rule templates.)
+    kubeControllerManager: false
+    kubeSchedulerAlerting: false
   disabled:
     KubeControllerManagerDown: true
     KubeSchedulerDown: true

@@ -1,0 +1,53 @@
+apiVersion: k8s.keycloak.org/v2beta1
+kind: Keycloak
+metadata:
+  name: {{ .Values.keycloak.name | quote }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    app.kubernetes.io/name: keycloak
+    app.kubernetes.io/part-of: platform
+    environment: {{ .Values.global.environment | quote }}
+spec:
+  instances: {{ .Values.keycloak.instances }}
+  image: {{ .Values.keycloak.image | quote }}
+  bootstrapAdmin:
+    user:
+      secret: keycloak-admin
+  db:
+    vendor: {{ .Values.keycloak.db.vendor | quote }}
+    host: {{ .Values.keycloak.db.host | quote }}
+    port: {{ .Values.keycloak.db.port }}
+    database: {{ .Values.keycloak.db.database | quote }}
+    usernameSecret:
+      name: {{ .Values.keycloak.db.usernameSecret.name | quote }}
+      key: {{ .Values.keycloak.db.usernameSecret.key | quote }}
+    passwordSecret:
+      name: {{ .Values.keycloak.db.passwordSecret.name | quote }}
+      key: {{ .Values.keycloak.db.passwordSecret.key | quote }}
+  hostname:
+    hostname: {{ default .Values.global.authDomain .Values.keycloak.hostname | quote }}
+    strict: true
+    backchannelDynamic: true
+  http:
+    httpEnabled: true
+  ingress:
+    enabled: false
+  transaction:
+    xaEnabled: true
+  features:
+    enabled:
+      - token-exchange
+      - admin-fine-grained-authz
+  additionalOptions:
+    - name: http-relative-path
+      value: {{ .Values.keycloak.httpRelativePath | quote }}
+    - name: proxy-headers
+      value: xforwarded
+    - name: health-enabled
+      value: "true"
+    - name: metrics-enabled
+      value: "true"
+    - name: log-level
+      value: info
+  resources:
+{{ toYaml .Values.keycloak.resources | indent 4 }}

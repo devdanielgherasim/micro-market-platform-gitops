@@ -20,23 +20,85 @@ data:
     apiVersion: 1
     contactPoints: []
 ---
-apiVersion: v1
-kind: ConfigMap
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
 metadata:
-  name: microservices-alerts
+  name: platform-observability-alerts
+  namespace: monitoring
   labels:
-    prometheus_alerts: "1"
-data:
-  microservices_alerts.yaml: |
-    groups:
-      - name: microservices
-        rules:
-          - alert: MicroserviceDown
-            expr: up{namespace=~"micro-market-.*|microservices"} == 0
-            for: 5m
-            labels:
-              severity: critical
-              team: platform
-            annotations:
-              summary: Microservice {{ "{{ $labels.service }}" }} is down
-              description: Microservice {{ "{{ $labels.service }}" }} has been down for more than 5 minutes.
+    app.kubernetes.io/part-of: monitoring
+spec:
+  groups:
+    - name: microservices
+      rules:
+        - alert: MicroserviceDown
+          expr: up{namespace=~"micro-market-.*|microservices"} == 0
+          for: 5m
+          labels:
+            severity: critical
+            team: platform
+          annotations:
+            summary: Microservice {{ "{{ $labels.service }}" }} is down
+            description: Microservice {{ "{{ $labels.service }}" }} has been down for more than 5 minutes.
+    - name: mesh
+      rules:
+        - alert: IstioZtunnelDown
+          expr: absent(up{namespace="istio-system", job=~".*ztunnel.*"} == 1)
+          for: 5m
+          labels:
+            severity: critical
+            team: platform
+          annotations:
+            summary: Istio ztunnel scrape target is missing
+            description: Prometheus has not observed an up ztunnel target for 5 minutes.
+        - alert: IstiodDown
+          expr: absent(up{namespace="istio-system", job=~".*istiod.*"} == 1)
+          for: 5m
+          labels:
+            severity: critical
+            team: platform
+          annotations:
+            summary: Istiod scrape target is missing
+            description: Prometheus has not observed an up istiod target for 5 minutes.
+    - name: certificates
+      rules:
+        - alert: CertificateExpiringSoon
+          expr: certmanager_certificate_expiration_timestamp_seconds - time() < 7 * 24 * 60 * 60
+          for: 30m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: Certificate {{ "{{ $labels.name }}" }} is expiring soon
+            description: Certificate {{ "{{ $labels.namespace }}" }}/{{ "{{ $labels.name }}" }} expires in less than 7 days.
+    - name: argocd
+      rules:
+        - alert: ArgoCDAppOutOfSync
+          expr: argocd_app_info{sync_status!="Synced"} == 1
+          for: 10m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: ArgoCD app {{ "{{ $labels.name }}" }} is out of sync
+            description: ArgoCD app {{ "{{ $labels.name }}" }} has sync status {{ "{{ $labels.sync_status }}" }} for more than 10 minutes.
+    - name: cnpg
+      rules:
+        - alert: CNPGClusterDegraded
+          expr: cnpg_collector_collection_errors_total > 0
+          for: 10m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: CloudNativePG collector is reporting errors
+            description: CNPG metrics collection has reported errors for more than 10 minutes.
+        - alert: CNPGInstanceDown
+          expr: up{namespace="postgresql", pod=~"postgresql-[0-9]+"} == 0
+          for: 5m
+          labels:
+            severity: critical
+            team: platform
+          annotations:
+            summary: CloudNativePG instance {{ "{{ $labels.pod }}" }} is down
+            description: PostgreSQL pod {{ "{{ $labels.pod }}" }} has been down for more than 5 minutes.

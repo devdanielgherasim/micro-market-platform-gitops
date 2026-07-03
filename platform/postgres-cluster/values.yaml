@@ -1,0 +1,41 @@
+global:
+  cloudProvider: azure
+  environment: dev
+  storageClass:
+    aws: gp3
+    azure: managed-csi
+    gcp: standard-rwo
+
+cluster:
+  name: postgresql
+  instances: 2
+  imageName: ghcr.io/cloudnative-pg/postgresql:16.4
+  database: microservices
+  owner: microservices_owner
+  ownerSecret: postgresql-auth
+  size: 10Gi
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: 1
+      memory: 1Gi
+  databases:
+    - name: catalog
+      owner: catalog
+    - name: orders
+      owner: orders
+    - name: audit
+      owner: audit
+    - name: keycloak
+      owner: keycloak
+  roles:
+    - name: catalog
+      passwordSecret: catalog-db-secret
+    - name: orders
+      passwordSecret: orders-db-secret
+    - name: audit
+      passwordSecret: audit-db-secret
+    - name: keycloak
+      passwordSecret: keycloak-postgresql

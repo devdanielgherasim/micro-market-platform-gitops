@@ -1,0 +1,86 @@
+# Checkov config for the `kubernetes` framework, scanning helm-template
+# output rendered by CI (see .gitlab-ci.yml, `helm-template` job -> `rendered/`
+# artifact: rendered/local/<addon>/ for this repo's own 9 charts,
+# rendered/upstream/<addon>/ for the 14 third-party charts pulled and
+# rendered by ci/render-upstream-charts.sh).
+framework:
+  - kubernetes
+
+skip-path:
+  # rendered/upstream/* is unmodified third-party chart output (cert-manager,
+  # Istio base/cni/istiod/ztunnel, kiali, external-dns, external-secrets,
+  # kube-prometheus-stack, loki, tempo, alloy, cloudnative-pg,
+  # aws-load-balancer-controller), pulled at pinned versions from their own
+  # maintainers -- this repo's only lever over them is the local
+  # platform/<addon>/values.yaml overlay, and most already set `resources:`
+  # for their primary containers (verified by hand across all 14 before
+  # deciding this). A manual `checkov` run against the full rendered
+  # upstream tree was done during development of this pipeline (334 findings
+  # / 3015 passed at the time of writing) and audited by hand rather than
+  # blanket-ignored:
+  #   - No `privileged: true` container exists anywhere in the render
+  #     (CKV_K8S_16 does not fire at all).
+  #   - The hostNetwork/hostPID/elevated-capability findings that DO fire are
+  #     all structurally required by well-known upstream defaults, not
+  #     accidental: `istio-cni-node` (DaemonSet, CAP_NET_ADMIN/CAP_SYS_ADMIN +
+  #     hostNetwork) needs host-level access to install the CNI plugin
+  #     binary/config on each node; `ztunnel` (CAP_NET_ADMIN) is Istio
+  #     ambient mode's node-level traffic-interception dataplane;
+  #     `kube-prometheus-stack-prometheus-node-exporter` (hostNetwork +
+  #     hostPID) is the standard, near-universal way to expose real host
+  #     metrics (CPU/disk/network of the node itself) -- none of these are
+  #     safely "fixable" via values without breaking the component.
+  #   - The broad-RBAC findings (CKV_K8S_155) land on cert-manager-cainjector,
+  #     cloudnative-pg, external-secrets-cert-controller, istiod, and
+  #     kube-prometheus-stack-admission -- all cluster-wide operators/
+  #     controllers whose entire job is managing CRDs/webhook configs across
+  #     namespaces; wide RBAC is inherent to that role, not a misconfiguration.
+  #   - The remainder is the same categories already handled/reasoned for
+  #     this repo's own charts below (missing resource limits on secondary/
+  #     sidecar/init containers, missing readOnlyRootFilesystem/seccomp on
+  #     third-party-authored containers, image-tag/digest pinning, helm-test-
+  #     hook pods like grafana-test/loki-helm-test, and the
+  #     default-namespace-on-cluster-scoped-resource false positive) spread
+  #     thin across ~300 sub-checks on 14 different unmodified vendor charts
+  #     -- fully re-hardening every third-party operator's every container is
+  #     out of proportion to a solo dissertation lab project and duplicates
+  #     security review that these widely-adopted upstream projects (several
+  #     CNCF-graduated) already own.
+  # rendered/local/* -- this repo's own 9 charts -- is NOT skipped; those are
+  # fully scanned and any real finding there is fixed in the templates/
+  # values directly (see keycloak-config/templates/sync-job.yaml, which had
+  # no securityContext/resources at all before this pipeline was built, and
+  # kube-prometheus-stack's defaultRules -- a *local values override* on an
+  # upstream chart, not the chart's own templates -- fixed the same way).
+  # (checkov skip-path entries are regexes matched against the file path, not
+  # globs -- no anchors, since paths are seen as e.g. "/rendered/upstream/...".)
+  - "rendered/upstream/"
+
+skip-check:
+  - CKV_K8S_43
+  # "Image should use digest" -- same reasoning as deployment/.checkov.yaml:
+  # charts are pinned to an exact chart version (targetRevision) which in
+  # turn pins a specific image tag upstream; digest pinning on top of that
+  # would need extra tooling this pipeline doesn't have yet.
+  - CKV_K8S_21
+  # "The default namespace should not be used" -- platform/<addon> local
+  # charts don't hardcode metadata.namespace on every resource (same
+  # idiomatic-Helm reasoning as deployment/.checkov.yaml); ArgoCD's
+  # Application `destination.namespace` (per addon.namespace in
+  # bootstrap/root/values.yaml) pins the real namespace at sync time, never
+  # "default".
+  - CKV_K8S_35
+  # "Prefer secrets as files over env vars" -- fires on
+  # keycloak-config/templates/sync-job.yaml (this repo's own chart, so this
+  # is a deliberate call, not upstream noise): the adorsys/keycloak-config-cli
+  # image's entire configuration interface is env vars
+  # (KEYCLOAK_USER/KEYCLOAK_PASSWORD/IMPORT_VARSUBSTITUTION_ENABLED/etc, see
+  # its own docs) -- there is no file-based config option to switch to.
+  - CKV_K8S_40
+  # "Containers should run as a high UID" -- fires on the same sync-job.yaml
+  # container. runAsUser/runAsGroup 1001 there is a value this repo picked,
+  # but the image (adorsys/keycloak-config-cli, third-party) may have files
+  # owned by a specific baked-in UID; bumping it without the ability to test
+  # against a live cluster risks breaking the one-shot sync Job on file
+  # ownership, same caution as deployment/.checkov.yaml's identical skip for
+  # the catalog/orders/audit/micro-market-frontend images.

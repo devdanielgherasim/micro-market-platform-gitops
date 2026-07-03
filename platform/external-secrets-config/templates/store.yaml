@@ -1,0 +1,46 @@
+{{- if eq .Values.global.cloudProvider "aws" }}
+apiVersion: external-secrets.io/v1beta1
+kind: ClusterSecretStore
+metadata:
+  name: platform-secrets
+spec:
+  provider:
+    aws:
+      service: SecretsManager
+      region: {{ .Values.aws.region | quote }}
+      auth:
+        jwt:
+          serviceAccountRef:
+            name: {{ .Values.aws.serviceAccount.name | quote }}
+            namespace: {{ .Values.aws.serviceAccount.namespace | quote }}
+{{- else if eq .Values.global.cloudProvider "azure" }}
+apiVersion: external-secrets.io/v1beta1
+kind: ClusterSecretStore
+metadata:
+  name: platform-secrets
+spec:
+  provider:
+    azurekv:
+      vaultUrl: {{ .Values.azure.vaultUrl | quote }}
+      tenantId: {{ .Values.azure.tenantId | quote }}
+      authType: WorkloadIdentity
+      serviceAccountRef:
+        name: {{ .Values.azure.serviceAccount.name | quote }}
+        namespace: {{ .Values.azure.serviceAccount.namespace | quote }}
+{{- else if eq .Values.global.cloudProvider "gcp" }}
+apiVersion: external-secrets.io/v1beta1
+kind: ClusterSecretStore
+metadata:
+  name: platform-secrets
+spec:
+  provider:
+    gcpsm:
+      projectID: {{ .Values.gcp.projectId | quote }}
+      auth:
+        workloadIdentity:
+          clusterLocation: {{ .Values.gcp.clusterLocation | quote }}
+          clusterName: {{ .Values.gcp.clusterName | quote }}
+          serviceAccountRef:
+            name: {{ .Values.gcp.serviceAccount.name | quote }}
+            namespace: {{ .Values.gcp.serviceAccount.namespace | quote }}
+{{- end }}

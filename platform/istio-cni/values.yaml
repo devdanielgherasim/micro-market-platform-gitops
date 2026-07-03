@@ -1,0 +1,11 @@
+profile: ambient
+
+global:
+  istioNamespace: istio-system
+
+cni:
+  ambient:
+    enabled: true
+  excludeNamespaces:
+    - istio-system
+    - kube-system

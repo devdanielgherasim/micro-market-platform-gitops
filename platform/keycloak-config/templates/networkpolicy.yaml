@@ -1,0 +1,30 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: keycloak-config-sync
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    app.kubernetes.io/name: keycloak-config
+    app.kubernetes.io/part-of: platform
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: keycloak-config
+  policyTypes:
+    - Ingress
+    - Egress
+  # No ingress: this is a one-shot sync Job, nothing needs to reach it.
+  ingress: []
+  egress:
+    # DNS resolution.
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Keycloak admin REST API (KEYCLOAK_URL, same cluster).
+    - to:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 8080
