@@ -27,8 +27,13 @@
 # matching row here.
 #
 # Table columns: name repoURL chart version valuesPath namespace
-# keycloak-operator uses an OCI registry (quay.io) instead of a classic Helm
-# repo and is handled separately below.
+# keycloak-operator is NOT in this table -- it moved to a local chart
+# (platform/keycloak-operator, with a real Chart.yaml + crds/ + templates/)
+# because the Keycloak maintainers don't publish a Helm chart at all;
+# quay.io/keycloak/keycloak-operator is a container image reference, not a
+# chart artifact. It's now linted/templated by the main helm-lint/
+# helm-template jobs' $LOCAL_CHARTS loop like any other local chart -- see
+# that chart's Chart.yaml for the full explanation.
 #
 # A single addon failing to render does NOT abort the whole run -- everything
 # else still gets rendered and handed to kubeconform/checkov -- but the
@@ -92,33 +97,6 @@ echo "$ADDONS" | awk -F'|' 'NF>1' | while IFS='|' read -r name repo chart versio
     echo "$name" >> "$FAILED_LIST_FILE"
   fi
 done
-
-# keycloak-operator: OCI registry, handled outside the classic-repo loop.
-# KNOWN ISSUE (found while building/testing this script, not a CI bug):
-# `oci://quay.io/keycloak/keycloak-operator` is a multi-arch *container
-# image* (application/vnd.oci.image.index.v1+json), not a Helm chart OCI
-# artifact -- `helm template`/`helm show chart` against it fails with
-# "could not load config with mediatype application/vnd.cncf.helm.config.v1
-# +json" regardless of version. This means the keycloak-operator addon's
-# repoURL/chart in bootstrap/root/values.yaml would also fail to sync for
-# real via ArgoCD as currently configured -- this is a pre-existing bug in
-# that addon's chart source, not something introduced by or fixable from
-# this CI script. Left failing (not skipped) so it surfaces rather than
-# getting silently ignored; whoever owns bootstrap/root/values.yaml should
-# find the operator's actual Helm distribution (Keycloak Operator is
-# commonly installed via raw manifests/OLM rather than a published Helm
-# chart, so the fix may be switching addon type from chart-based to a raw
-# manifest `path`/URL source, not just changing the version pin).
-echo "== rendering upstream addon: keycloak-operator (keycloak-operator @ 26.3.1 from oci://quay.io/keycloak) =="
-if ! helm template keycloak-operator oci://quay.io/keycloak/keycloak-operator \
-  --version 26.3.1 \
-  -f platform/keycloak-operator/values.yaml \
-  -f "$GLOBAL_VALUES" \
-  --namespace keycloak \
-  --output-dir "$OUT_DIR/keycloak-operator"; then
-  echo "!! FAILED to render upstream addon: keycloak-operator (see KNOWN ISSUE comment above)" >&2
-  echo "keycloak-operator" >> "$FAILED_LIST_FILE"
-fi
 
 echo "rendered upstream addons into $OUT_DIR/"
 

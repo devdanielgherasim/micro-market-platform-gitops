@@ -1,0 +1,41 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: keycloak-operator
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    app.kubernetes.io/name: keycloak-operator
+    app.kubernetes.io/part-of: platform
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: keycloak-operator
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Kubelet liveness/readiness/startup probes on the health endpoint. Not
+    # restricted to a podSelector/ipBlock: kubelet probe traffic originates
+    # from the node itself, which isn't reliably expressible as an in-cluster
+    # pod source across every CNI, so this is scoped by port only.
+    - ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    # DNS resolution.
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Kubernetes API server: this operator's entire job is watching/
+    # reconciling Keycloak and KeycloakRealmImport CRs (and the Deployments/
+    # StatefulSets/Services/Secrets it manages on their behalf) against the
+    # API server. The API server runs on the control plane, not as an
+    # in-cluster pod reachable via podSelector, so this is scoped by port
+    # only rather than a destination selector.
+    - ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 6443

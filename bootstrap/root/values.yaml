@@ -187,13 +187,14 @@ addons:
     path: platform/postgres-cluster
     syncWave: "0"
   keycloak-operator:
+    # Local chart (platform/keycloak-operator), not an upstream chart source:
+    # the Keycloak maintainers don't publish a Helm chart, and
+    # quay.io/keycloak/keycloak-operator is a container image reference, not
+    # a chart -- see that chart's Chart.yaml for the full explanation.
     enabled: true
     namespace: keycloak
-    repoURL: quay.io/keycloak
-    chart: keycloak-operator
-    targetRevision: 26.3.1
+    path: platform/keycloak-operator
     syncWave: "1"
-    valuesPath: platform/keycloak-operator/values.yaml
   keycloak:
     enabled: true
     namespace: keycloak

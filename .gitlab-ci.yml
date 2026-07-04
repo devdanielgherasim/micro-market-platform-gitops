@@ -6,11 +6,18 @@
 #   - platform/<addon> splits into two kinds. "Local" charts (referenced by
 #     `path:` in bootstrap/root/values.yaml addons.*: storage-class,
 #     cert-manager-config, gateway, external-secrets-config,
-#     monitoring-config, postgres-cluster, keycloak, keycloak-config) have a
-#     real Chart.yaml + templates/ and get linted/templated directly.
+#     monitoring-config, postgres-cluster, keycloak, keycloak-config,
+#     keycloak-operator) have a real Chart.yaml + templates/ and get
+#     linted/templated directly. keycloak-operator is a vendored local chart
+#     rather than a hand-rolled one -- the Keycloak maintainers don't publish
+#     a Helm chart at all (quay.io/keycloak/keycloak-operator is a container
+#     image reference, not a chart artifact), so its CRDs/RBAC/Deployment are
+#     vendored from the official raw-manifest install path into
+#     platform/keycloak-operator/{crds,templates} -- see that chart's
+#     Chart.yaml for the full explanation.
 #     "Upstream-chart" addons (cert-manager, istio-base/cni/istiod, ztunnel,
 #     kiali, external-dns, external-secrets, kube-prometheus-stack, loki,
-#     tempo, alloy, cloudnative-pg, keycloak-operator,
+#     tempo, alloy, cloudnative-pg,
 #     aws-load-balancer-controller) contain *only* a values.yaml -- ArgoCD
 #     pulls the real chart from the upstream Helm repo at sync time and uses
 #     that file as a `valueFiles` overlay (see
@@ -21,7 +28,7 @@
 #     the manifests ArgoCD actually deploys (Prometheus/Grafana pod specs,
 #     cert-manager controller, Istio control plane, etc.), which is where
 #     most of the checkov-relevant container security surface lives.
-#   - None of the 9 local charts declare a Chart.yaml `dependencies:` block,
+#   - None of the 10 local charts declare a Chart.yaml `dependencies:` block,
 #     so `helm dependency build` is a no-op today; still run defensively.
 #   - Several local charts (storage-class, cert-manager-config, gateway,
 #     monitoring-config) have no values.yaml at all and render
@@ -40,7 +47,7 @@ stages:
   - scan
 
 variables:
-  LOCAL_CHARTS: "bootstrap/root platform/storage-class platform/cert-manager-config platform/gateway platform/external-secrets-config platform/monitoring-config platform/postgres-cluster platform/keycloak platform/keycloak-config"
+  LOCAL_CHARTS: "bootstrap/root platform/storage-class platform/cert-manager-config platform/gateway platform/external-secrets-config platform/monitoring-config platform/postgres-cluster platform/keycloak platform/keycloak-config platform/keycloak-operator"
 
 helm-lint:
   stage: lint
@@ -80,7 +87,9 @@ helm-template:
         case "$chart" in
           */external-secrets-config) extra="-f ci/secret-stores-values.yaml" ;;
         esac
-        helm template "$chart" -f ci/global-values.yaml $extra --namespace "$name" --output-dir "rendered/local/$name"
+        # --include-crds: only platform/keycloak-operator has a crds/ directory
+        # today, but this covers any future local chart that gains one too.
+        helm template "$chart" -f ci/global-values.yaml $extra --namespace "$name" --include-crds --output-dir "rendered/local/$name"
       done
       sh ci/render-upstream-charts.sh rendered/upstream
   artifacts:

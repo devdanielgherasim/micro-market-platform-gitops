@@ -1,0 +1,15 @@
+apiVersion: v2
+name: keycloak-operator
+description: |
+  Official Keycloak Operator (CRDs + controller Deployment/RBAC), vendored as a
+  local chart. The Keycloak maintainers deliberately do not publish a Helm
+  chart (https://www.keycloak.org/operator/installation recommends OLM or raw
+  kubectl manifests) — quay.io/keycloak/keycloak-operator is a container image
+  reference, not a Helm OCI chart artifact, so this addon cannot be sourced the
+  way every other platform-gitops addon is (repoURL+chart+targetRevision
+  against a real chart registry). Vendoring the official manifests as a local
+  chart keeps this addon consistent with the app-of-apps pattern instead of
+  introducing a second, structurally different ArgoCD source type.
+type: application
+version: 0.1.0
+appVersion: "26.3.1"
