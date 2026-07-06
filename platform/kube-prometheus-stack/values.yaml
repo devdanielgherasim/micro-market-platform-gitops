@@ -10,6 +10,8 @@ prometheus:
     walCompression: true
     enableAdminAPI: false
     externalUrl: /prometheus
+    podAntiAffinity: soft
+    podAntiAffinityTopologyKey: topology.kubernetes.io/zone
     storageSpec:
       volumeClaimTemplate:
         spec:
@@ -26,7 +28,7 @@ prometheus:
       limits:
         memory: 512Mi
         cpu: 500m
-    replicas: 1
+    replicas: 2
     externalLabels:
       cluster: dev
       environment: dev
@@ -76,7 +78,7 @@ grafana:
       memory: 512Mi
       cpu: 200m
   image:
-    tag: 10.4.5
+    tag: 11.4.3
   sidecar:
     dashboards:
       enabled: true

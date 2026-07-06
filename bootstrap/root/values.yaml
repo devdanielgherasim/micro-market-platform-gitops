@@ -17,7 +17,7 @@ global:
 
 secretStores:
   aws:
-    region: us-east-1
+    region: eu-central-1
     secretPrefix: danielgherasim-microservices/dev
     externalSecretsRoleArn: ""
   azure:

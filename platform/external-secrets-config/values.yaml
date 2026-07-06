@@ -4,7 +4,7 @@ global:
   domain: danielgherasim.com
 
 aws:
-  region: us-east-1
+  region: eu-central-1
   serviceAccount:
     name: external-secrets
     namespace: external-secrets
