@@ -1,16 +1,22 @@
 {{- $root := . -}}
 {{- range $name, $addon := .Values.addons }}
 {{- $cloudAllowed := true -}}
+{{- $environmentAllowed := true -}}
 {{- if hasKey $addon "enabledFor" -}}
 {{- $cloudAllowed = has $root.Values.global.cloudProvider $addon.enabledFor -}}
 {{- end -}}
-{{- if and $addon.enabled $cloudAllowed }}
+{{- if hasKey $addon "disabledForEnvironments" -}}
+{{- $environmentAllowed = not (has $root.Values.global.environment $addon.disabledForEnvironments) -}}
+{{- end -}}
+{{- if and $addon.enabled $cloudAllowed $environmentAllowed }}
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: {{ printf "platform-%s" $name | quote }}
   namespace: {{ $root.Values.project.namespace | quote }}
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
   annotations:
     argocd.argoproj.io/sync-wave: {{ $addon.syncWave | default "0" | quote }}
   labels:

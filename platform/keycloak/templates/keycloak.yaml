@@ -8,7 +8,7 @@ metadata:
     app.kubernetes.io/part-of: platform
     environment: {{ .Values.global.environment | quote }}
 spec:
-  instances: {{ .Values.keycloak.instances }}
+  instances: {{ ternary 1 .Values.keycloak.instances (eq .Values.global.environment "dev") }}
   image: {{ .Values.keycloak.image | quote }}
   bootstrapAdmin:
     user:
@@ -50,4 +50,13 @@ spec:
     - name: log-level
       value: info
   resources:
+{{- if eq .Values.global.environment "dev" }}
+    requests:
+      cpu: 200m
+      memory: 384Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi
+{{- else }}
 {{ toYaml .Values.keycloak.resources | indent 4 }}
+{{- end }}

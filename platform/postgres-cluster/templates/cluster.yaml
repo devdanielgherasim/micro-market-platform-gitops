@@ -8,7 +8,7 @@ metadata:
     app.kubernetes.io/part-of: platform
     environment: {{ .Values.global.environment | quote }}
 spec:
-  instances: {{ .Values.cluster.instances }}
+  instances: {{ ternary 1 .Values.cluster.instances (eq .Values.global.environment "dev") }}
   imageName: {{ .Values.cluster.imageName | quote }}
   enableSuperuserAccess: false
 
@@ -17,7 +17,16 @@ spec:
     storageClass: {{ index .Values.global.storageClass .Values.global.cloudProvider | quote }}
 
   resources:
+{{- if eq .Values.global.environment "dev" }}
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+{{- else }}
 {{ toYaml .Values.cluster.resources | indent 4 }}
+{{- end }}
 
   monitoring:
     enablePodMonitor: true

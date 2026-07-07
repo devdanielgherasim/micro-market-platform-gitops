@@ -109,6 +109,7 @@ addons:
     syncWave: "-10"
   kiali:
     enabled: true
+    disabledForEnvironments: [dev]
     namespace: kiali
     repoURL: https://kiali.org/helm-charts
     chart: kiali-server
@@ -138,6 +139,7 @@ addons:
     syncWave: "-6"
   kube-prometheus-stack:
     enabled: true
+    disabledForEnvironments: [dev]
     namespace: monitoring
     repoURL: https://prometheus-community.github.io/helm-charts
     chart: kube-prometheus-stack
@@ -146,11 +148,13 @@ addons:
     valuesPath: platform/kube-prometheus-stack/values.yaml
   monitoring-config:
     enabled: true
+    disabledForEnvironments: [dev]
     namespace: monitoring
     path: platform/monitoring-config
     syncWave: "-4"
   loki:
     enabled: true
+    disabledForEnvironments: [dev]
     namespace: monitoring
     repoURL: https://grafana.github.io/helm-charts
     chart: loki
@@ -159,6 +163,7 @@ addons:
     valuesPath: platform/loki/values.yaml
   tempo:
     enabled: true
+    disabledForEnvironments: [dev]
     namespace: monitoring
     repoURL: https://grafana.github.io/helm-charts
     chart: tempo
@@ -167,6 +172,7 @@ addons:
     valuesPath: platform/tempo/values.yaml
   alloy:
     enabled: true
+    disabledForEnvironments: [dev]
     namespace: monitoring
     repoURL: https://grafana.github.io/helm-charts
     chart: alloy
