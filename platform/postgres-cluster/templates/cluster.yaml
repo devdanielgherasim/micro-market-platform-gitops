@@ -18,12 +18,7 @@ spec:
 
   resources:
 {{- if eq .Values.global.environment "dev" }}
-    requests:
-      cpu: 100m
-      memory: 256Mi
-    limits:
-      cpu: 500m
-      memory: 512Mi
+{{ toYaml .Values.cluster.devResources | indent 4 }}
 {{- else }}
 {{ toYaml .Values.cluster.resources | indent 4 }}
 {{- end }}

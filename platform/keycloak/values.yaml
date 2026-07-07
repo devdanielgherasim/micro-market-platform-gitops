@@ -20,6 +20,16 @@ keycloak:
     passwordSecret:
       name: keycloak-postgresql
       key: password
+  # Applied when global.environment == "dev" (single instance, right-sized
+  # for a dissertation-scale cluster). See templates/keycloak.yaml.
+  devResources:
+    requests:
+      cpu: 200m
+      memory: 384Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi
+  # Applied for every other environment.
   resources:
     requests:
       cpu: 400m

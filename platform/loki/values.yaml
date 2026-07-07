@@ -27,24 +27,31 @@ deploymentMode: SingleBinary
 
 singleBinary:
   replicas: 1
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
 
 chunksCache:
   resources:
     limits:
       cpu: 100m
-      memory: 830Mi
+      memory: 128Mi
     requests:
       cpu: 100m
-      memory: 830Mi
+      memory: 128Mi
 
 resultsCache:
   resources:
     limits:
       cpu: 100m
-      memory: 830Mi
+      memory: 128Mi
     requests:
       cpu: 100m
-      memory: 830Mi
+      memory: 128Mi
 
 backend:
   replicas: 0

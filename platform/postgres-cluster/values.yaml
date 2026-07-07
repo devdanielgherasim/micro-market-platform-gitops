@@ -14,6 +14,16 @@ cluster:
   owner: microservices_owner
   ownerSecret: postgresql-auth
   size: 10Gi
+  # Applied when global.environment == "dev" (single instance, right-sized
+  # for a dissertation-scale cluster). See templates/cluster.yaml.
+  devResources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  # Applied for every other environment.
   resources:
     requests:
       cpu: 200m
