@@ -7,6 +7,7 @@
 
 # Local render/test output
 *.rendered.yaml
+rendered/
 tmp/
 
 # Credentials must never live in GitOps source.

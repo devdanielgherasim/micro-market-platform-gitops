@@ -1,0 +1,164 @@
+name: Platform GitOps CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+  pull-requests: read
+
+env:
+  LOCAL_CHARTS: >-
+    bootstrap/root
+    platform/storage-class
+    platform/cert-manager-config
+    platform/gateway
+    platform/external-secrets-config
+    platform/monitoring-config
+    platform/postgres-cluster
+    platform/keycloak
+    platform/keycloak-config
+    platform/keycloak-operator
+
+jobs:
+  security-scan-gate:
+    name: Security scan gate
+    uses: devdanielgherasim/micro-market-utilities/.github/workflows/security-scan-gate.yml@main
+    with:
+      codeql-languages: actions
+
+  helm-lint:
+    name: Helm lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint local charts
+        env:
+          LOCAL_CHARTS: ${{ env.LOCAL_CHARTS }}
+        run: |
+          set -eu
+          docker run --rm \
+            --entrypoint sh \
+            -v "${PWD}:/work" \
+            -w /work \
+            -e LOCAL_CHARTS \
+            alpine/helm:3.16.3 \
+            -ec '
+              for chart in ${LOCAL_CHARTS}; do
+                echo "== helm dependency build: ${chart} (no-op unless Chart.yaml gains a dependencies: block) =="
+                helm dependency build "${chart}" || true
+                extra=""
+                case "${chart}" in
+                  */external-secrets-config) extra="-f ci/secret-stores-values.yaml" ;;
+                esac
+                echo "== helm lint: ${chart} =="
+                # shellcheck disable=SC2086
+                helm lint "${chart}" -f ci/global-values.yaml ${extra}
+              done
+            '
+
+  helm-template:
+    name: Helm template
+    runs-on: ubuntu-latest
+    needs:
+      - helm-lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Render local and upstream charts
+        env:
+          LOCAL_CHARTS: ${{ env.LOCAL_CHARTS }}
+        run: |
+          set -eu
+          docker run --rm \
+            --entrypoint sh \
+            -v "${PWD}:/work" \
+            -w /work \
+            -e LOCAL_CHARTS \
+            alpine/helm:3.16.3 \
+            -ec '
+              mkdir -p rendered/local
+              for chart in ${LOCAL_CHARTS}; do
+                name="$(basename "${chart}")"
+                extra=""
+                case "${chart}" in
+                  */external-secrets-config) extra="-f ci/secret-stores-values.yaml" ;;
+                esac
+                # --include-crds matters today for keycloak-operator and keeps
+                # future CRD-owning local charts covered automatically.
+                # shellcheck disable=SC2086
+                helm template "${chart}" \
+                  -f ci/global-values.yaml \
+                  ${extra} \
+                  --namespace "${name}" \
+                  --include-crds \
+                  --output-dir "rendered/local/${name}"
+              done
+              sh ci/render-upstream-charts.sh rendered/upstream
+            '
+
+      - name: Upload rendered manifests
+        uses: actions/upload-artifact@v4
+        with:
+          name: rendered-manifests
+          path: rendered/
+          retention-days: 1
+          if-no-files-found: error
+
+  kubeconform:
+    name: Kubeconform
+    runs-on: ubuntu-latest
+    needs:
+      - helm-template
+    steps:
+      - name: Download rendered manifests
+        uses: actions/download-artifact@v4
+        with:
+          name: rendered-manifests
+          path: rendered
+
+      - name: Validate Kubernetes schemas
+        run: |
+          set -eu
+          docker run --rm \
+            -v "${PWD}/rendered:/rendered:ro" \
+            ghcr.io/yannh/kubeconform:v0.8.0-alpine \
+            -ignore-missing-schemas \
+            -schema-location default \
+            -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
+            -summary \
+            -verbose \
+            /rendered
+
+  checkov:
+    name: Checkov
+    runs-on: ubuntu-latest
+    needs:
+      - helm-template
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download rendered manifests
+        uses: actions/download-artifact@v4
+        with:
+          name: rendered-manifests
+          path: rendered
+
+      - name: Scan rendered Kubernetes manifests
+        run: |
+          set -eu
+          docker run --rm \
+            -v "${PWD}:/work" \
+            -w /work \
+            bridgecrew/checkov:3.3.7 \
+            -d rendered \
+            --framework kubernetes \
+            --compact \
+            --config-file .checkov.yaml
