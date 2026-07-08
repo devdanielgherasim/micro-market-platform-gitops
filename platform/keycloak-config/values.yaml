@@ -4,7 +4,7 @@ global:
   environment: dev
 
 keycloak:
-  url: http://keycloak-service.keycloak.svc.cluster.local:8080/auth
+  url: http://keycloak-operator.keycloak.svc.cluster.local/auth
   adminSecret:
     name: keycloak-admin
     passwordKey: password
