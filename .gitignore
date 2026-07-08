@@ -1,3 +1,6 @@
+# Local persistent agent plans
+/plans/
+
 .idea/
 .vscode/
 .DS_Store

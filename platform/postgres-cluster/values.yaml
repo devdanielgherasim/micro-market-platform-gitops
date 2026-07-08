@@ -9,7 +9,7 @@ global:
 cluster:
   name: postgresql
   instances: 2
-  imageName: ghcr.io/cloudnative-pg/postgresql:16.4
+  imageName: ghcr.io/cloudnative-pg/postgresql:16.14
   database: microservices
   owner: microservices_owner
   ownerSecret: postgresql-auth

@@ -52,19 +52,19 @@ mkdir -p "$OUT_DIR"
 # name|repoURL|chart|version|valuesPath|namespace
 ADDONS='
 aws-load-balancer-controller|https://aws.github.io/eks-charts|aws-load-balancer-controller|1.8.2|platform/aws-load-balancer-controller/values.yaml|kube-system
-cert-manager|https://charts.jetstack.io|cert-manager|v1.17.2|platform/cert-manager/values.yaml|cert-manager
-istio-base|https://istio-release.storage.googleapis.com/charts|base|1.25.2|platform/istio-base/values.yaml|istio-system
-istio-cni|https://istio-release.storage.googleapis.com/charts|cni|1.25.2|platform/istio-cni/values.yaml|istio-system
-istiod|https://istio-release.storage.googleapis.com/charts|istiod|1.25.2|platform/istiod/values.yaml|istio-system
-ztunnel|https://istio-release.storage.googleapis.com/charts|ztunnel|1.25.2|platform/ztunnel/values.yaml|istio-system
+cert-manager|https://charts.jetstack.io|cert-manager|v1.20.3|platform/cert-manager/values.yaml|cert-manager
+istio-base|https://istio-release.storage.googleapis.com/charts|base|1.30.2|platform/istio-base/values.yaml|istio-system
+istio-cni|https://istio-release.storage.googleapis.com/charts|cni|1.30.2|platform/istio-cni/values.yaml|istio-system
+istiod|https://istio-release.storage.googleapis.com/charts|istiod|1.30.2|platform/istiod/values.yaml|istio-system
+ztunnel|https://istio-release.storage.googleapis.com/charts|ztunnel|1.30.2|platform/ztunnel/values.yaml|istio-system
 kiali|https://kiali.org/helm-charts|kiali-server|1.89.0|platform/kiali/values.yaml|kiali
-external-dns|https://kubernetes-sigs.github.io/external-dns/|external-dns|1.15.2|platform/external-dns/values.yaml|external-dns
+external-dns|https://kubernetes-sigs.github.io/external-dns/|external-dns|1.21.1|platform/external-dns/values.yaml|external-dns
 external-secrets|https://charts.external-secrets.io|external-secrets|0.10.5|platform/external-secrets/values.yaml|external-secrets
 kube-prometheus-stack|https://prometheus-community.github.io/helm-charts|kube-prometheus-stack|75.3.0|platform/kube-prometheus-stack/values.yaml|monitoring
-loki|https://grafana.github.io/helm-charts|loki|6.30.1|platform/loki/values.yaml|monitoring
-tempo|https://grafana.github.io/helm-charts|tempo|1.21.1|platform/tempo/values.yaml|monitoring
-alloy|https://grafana.github.io/helm-charts|alloy|1.1.1|platform/alloy/values.yaml|monitoring
-cloudnative-pg|https://cloudnative-pg.github.io/charts|cloudnative-pg|0.23.2|platform/cloudnative-pg/values.yaml|postgresql
+loki|https://grafana.github.io/helm-charts|loki|6.45.2|platform/loki/values.yaml|monitoring
+tempo|https://grafana.github.io/helm-charts|tempo|1.24.4|platform/tempo/values.yaml|monitoring
+alloy|https://grafana.github.io/helm-charts|alloy|1.10.0|platform/alloy/values.yaml|monitoring
+cloudnative-pg|https://cloudnative-pg.github.io/charts|cloudnative-pg|0.29.0|platform/cloudnative-pg/values.yaml|postgresql
 '
 
 # Add each distinct classic Helm repo once.

@@ -55,7 +55,7 @@ addons:
     namespace: cert-manager
     repoURL: https://charts.jetstack.io
     chart: cert-manager
-    targetRevision: v1.17.2
+    targetRevision: v1.20.3
     syncWave: "-18"
     valuesPath: platform/cert-manager/values.yaml
   cert-manager-config:
@@ -67,7 +67,7 @@ addons:
     enabled: true
     namespace: kube-system
     repoURL: https://github.com/kubernetes-sigs/gateway-api.git
-    targetRevision: v1.3.0
+    targetRevision: v1.5.1
     path: config/crd
     syncWave: "-16"
   istio-base:
@@ -75,7 +75,7 @@ addons:
     namespace: istio-system
     repoURL: https://istio-release.storage.googleapis.com/charts
     chart: base
-    targetRevision: 1.25.2
+    targetRevision: 1.30.2
     syncWave: "-15"
     valuesPath: platform/istio-base/values.yaml
   istio-cni:
@@ -83,7 +83,7 @@ addons:
     namespace: istio-system
     repoURL: https://istio-release.storage.googleapis.com/charts
     chart: cni
-    targetRevision: 1.25.2
+    targetRevision: 1.30.2
     syncWave: "-14"
     valuesPath: platform/istio-cni/values.yaml
   istiod:
@@ -91,7 +91,7 @@ addons:
     namespace: istio-system
     repoURL: https://istio-release.storage.googleapis.com/charts
     chart: istiod
-    targetRevision: 1.25.2
+    targetRevision: 1.30.2
     syncWave: "-13"
     valuesPath: platform/istiod/values.yaml
   ztunnel:
@@ -99,7 +99,7 @@ addons:
     namespace: istio-system
     repoURL: https://istio-release.storage.googleapis.com/charts
     chart: ztunnel
-    targetRevision: 1.25.2
+    targetRevision: 1.30.2
     syncWave: "-12"
     valuesPath: platform/ztunnel/values.yaml
   gateway:
@@ -121,7 +121,7 @@ addons:
     namespace: external-dns
     repoURL: https://kubernetes-sigs.github.io/external-dns/
     chart: external-dns
-    targetRevision: 1.15.2
+    targetRevision: 1.21.1
     syncWave: "-8"
     valuesPath: platform/external-dns/values.yaml
   external-secrets:
@@ -158,7 +158,7 @@ addons:
     namespace: monitoring
     repoURL: https://grafana.github.io/helm-charts
     chart: loki
-    targetRevision: 6.30.1
+    targetRevision: 6.45.2
     syncWave: "-3"
     valuesPath: platform/loki/values.yaml
   tempo:
@@ -167,7 +167,7 @@ addons:
     namespace: monitoring
     repoURL: https://grafana.github.io/helm-charts
     chart: tempo
-    targetRevision: 1.21.1
+    targetRevision: 1.24.4
     syncWave: "-3"
     valuesPath: platform/tempo/values.yaml
   alloy:
@@ -176,7 +176,7 @@ addons:
     namespace: monitoring
     repoURL: https://grafana.github.io/helm-charts
     chart: alloy
-    targetRevision: 1.1.1
+    targetRevision: 1.10.0
     syncWave: "-2"
     valuesPath: platform/alloy/values.yaml
   cloudnative-pg:
@@ -184,7 +184,7 @@ addons:
     namespace: postgresql
     repoURL: https://cloudnative-pg.github.io/charts
     chart: cloudnative-pg
-    targetRevision: 0.23.2
+    targetRevision: 0.29.0
     syncWave: "-1"
     valuesPath: platform/cloudnative-pg/values.yaml
   postgres-cluster:

@@ -12,7 +12,7 @@ keycloak:
     name: keycloak-client-secrets
 
 sync:
-  image: adorsys/keycloak-config-cli:6.4.0-26.0.5
+  image: adorsys/keycloak-config-cli:6.5.1-26.1.0
   backoffLimit: 3
   ttlSecondsAfterFinished: 600
 
