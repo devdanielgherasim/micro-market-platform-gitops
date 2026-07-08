@@ -19,6 +19,7 @@ spec:
     - https://kiali.org/helm-charts
     - https://kubernetes-sigs.github.io/external-dns/
     - https://prometheus-community.github.io/helm-charts
+    - https://cloudnative-pg.github.io/charts
   destinations:
     - namespace: '*'
       server: {{ .Values.global.destinationServer | quote }}
