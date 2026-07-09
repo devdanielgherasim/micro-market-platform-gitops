@@ -137,7 +137,14 @@ grafana:
             serviceMap:
               datasourceUid: Prometheus
   dashboards:
-    monitoring:
+    # The grafana chart's download-dashboards initContainer hardcodes
+    # `mkdir -p /var/lib/grafana/dashboards/default` regardless of the
+    # provider key used here (verified against grafana chart 9.2.6's
+    # templates/_pod.tpl) -- any other key silently fails with "nonexistent
+    # directory" since the folder is never created. Provider key must stay
+    # `default` to match, and `dashboardProviders` below must point at the
+    # same path or Grafana won't provision the downloaded dashboards either.
+    default:
       k8s-views-global:
         gnetId: 15757
         revision: 43
@@ -158,6 +165,19 @@ grafana:
         gnetId: 16443
         revision: 2
         datasource: Tempo
+
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: default
+          orgId: 1
+          folder: ""
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/default
 
 defaultRules:
   create: true

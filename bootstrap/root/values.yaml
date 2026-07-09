@@ -1,5 +1,5 @@
 global:
-  repoURL: https://gitlab.com/microservices1691715/platform-gitops.git
+  repoURL: https://github.com/devdanielgherasim/micro-market-platform-gitops.git
   targetRevision: HEAD
   project: platform
   destinationServer: https://kubernetes.default.svc
@@ -179,7 +179,7 @@ addons:
     syncWave: "-2"
     valuesPath: platform/alloy/values.yaml
   cloudnative-pg:
-    enabled: true
+    enabled: false
     namespace: postgresql
     repoURL: https://cloudnative-pg.github.io/charts
     chart: cloudnative-pg
@@ -187,7 +187,7 @@ addons:
     syncWave: "-1"
     valuesPath: platform/cloudnative-pg/values.yaml
   postgres-cluster:
-    enabled: true
+    enabled: false
     namespace: postgresql
     path: platform/postgres-cluster
     syncWave: "0"
