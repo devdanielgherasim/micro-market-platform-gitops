@@ -126,13 +126,6 @@ spec:
                 volumeClaimTemplate:
                   spec:
                     storageClassName: {{ index $root.Values.global.storageClass $root.Values.global.cloudProvider | quote }}
-          alertmanager:
-            alertmanagerSpec:
-              externalUrl: {{ printf "https://%s/alertmanager" $root.Values.global.domain | quote }}
-              storage:
-                volumeClaimTemplate:
-                  spec:
-                    storageClassName: {{ index $root.Values.global.storageClass $root.Values.global.cloudProvider | quote }}
           grafana:
             persistence:
               storageClassName: {{ index $root.Values.global.storageClass $root.Values.global.cloudProvider | quote }}

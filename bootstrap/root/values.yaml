@@ -151,7 +151,11 @@ addons:
     path: platform/monitoring-config
     syncWave: "-4"
   loki:
-    enabled: true
+    # Disabled for dev/free-quota sizing (2026-07-09): the 4-vCPU Azure free
+    # subscription can't fit Loki's singleBinary + bundled MinIO + 2 caches
+    # (~300m+ CPU requests) alongside everything else. See
+    # plans/2026-07-08-dev-free-quota-platform-sizing.md.
+    enabled: false
     namespace: monitoring
     repoURL: https://grafana.github.io/helm-charts
     chart: loki

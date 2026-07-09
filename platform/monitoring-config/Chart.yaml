@@ -1,6 +1,6 @@
 apiVersion: v2
 name: monitoring-config
-description: Grafana and Alertmanager configuration objects
+description: Tempo and Alloy OTLP service objects
 type: application
 version: 0.1.0
 appVersion: "0.1.0"

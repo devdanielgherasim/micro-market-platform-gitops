@@ -33,35 +33,12 @@ prometheus:
       cluster: dev
       environment: dev
 
+# Disabled for dev/free-quota sizing (2026-07-09): 2 replicas x 50m CPU
+# requests, plus the AlertmanagerConfig/PrometheusRule/Grafana wiring that
+# only existed to feed it, removed entirely. See
+# plans/2026-07-08-dev-free-quota-platform-sizing.md.
 alertmanager:
-  enabled: true
-  alertmanagerSpec:
-    replicas: 2
-    retention: 120h
-    podAntiAffinity: soft
-    alertmanagerConfigSelector:
-      matchLabels:
-        alertmanagerConfig: platform
-    alertmanagerConfigNamespaceSelector:
-      matchLabels:
-        kubernetes.io/metadata.name: monitoring
-    externalUrl: https://danielgherasim.com/alertmanager
-    storage:
-      volumeClaimTemplate:
-        spec:
-          storageClassName: managed-csi
-          accessModes:
-            - ReadWriteOnce
-          resources:
-            requests:
-              storage: 2Gi
-    resources:
-      requests:
-        memory: 128Mi
-        cpu: 50m
-      limits:
-        memory: 256Mi
-        cpu: 100m
+  enabled: false
 
 grafana:
   replicas: 1
@@ -133,16 +110,7 @@ grafana:
       api_url: https://auth.danielgherasim.com/auth/realms/microservices/protocol/openid-connect/userinfo
       role_attribute_path: contains(roles[*], 'admin') && 'Admin' || contains(roles[*], 'editor') && 'Editor' || 'Viewer'
     unified_alerting:
-      enabled: true
-      alertmanagers:
-        alertmanager:
-          name: AlertManager
-          type: alertmanager
-          uid: alertmanager
-          url: http://kube-prometheus-stack-alertmanager.monitoring.svc.cluster.local:9093
-          access: proxy
-          implementation: prometheus
-          handleGrafanaManagedAlerts: true
+      enabled: false
     alerting:
       enabled: false
     smtp:
@@ -157,31 +125,6 @@ grafana:
     datasources.yaml:
       apiVersion: 1
       datasources:
-        - name: Alertmanager
-          type: alertmanager
-          url: http://kube-prometheus-stack-alertmanager.monitoring.svc.cluster.local:9093
-          access: proxy
-          isDefault: false
-          uid: alertmanager
-          jsonData:
-            implementation: prometheus
-            handleGrafanaManagedAlerts: true
-            manageAlerts: true
-        - name: Loki
-          type: loki
-          url: http://loki:3100/
-          access: proxy
-          isDefault: false
-          uid: Loki
-          editable: true
-          jsonData:
-            alerting: true
-            manageAlerts: true
-            derivedFields:
-              - datasourceUid: Tempo
-                matcherRegex: '"trace_id":"([a-f0-9]+)"'
-                name: TraceID
-                url: '$${__value.raw}'
         - name: Tempo
           type: tempo
           url: http://tempo:3100
@@ -193,34 +136,15 @@ grafana:
             httpMethod: GET
             serviceMap:
               datasourceUid: Prometheus
-            tracesToLogsV2:
-              datasourceUid: Loki
-              spanStartTimeShift: -5m
-              spanEndTimeShift: 5m
-              tags:
-                - key: service.name
-                  value: app
-                - key: k8s.namespace.name
-                  value: namespace
-              filterByTraceID: true
-              filterBySpanID: false
   dashboards:
     monitoring:
       k8s-views-global:
         gnetId: 15757
         revision: 43
         datasource: Prometheus
-      loki:
-        gnetId: 13639
-        revision: 2
-        datasource: Loki
       cert-manager:
         gnetId: 20340
         revision: 1
-        datasource: Prometheus
-      alert-manager:
-        gnetId: 9578
-        revision: 4
         datasource: Prometheus
       postgres:
         gnetId: 9628
@@ -238,7 +162,11 @@ grafana:
 defaultRules:
   create: true
   rules:
-    alertmanager: true
+    # Alertmanager is disabled (see the `alertmanager:` block above) so this
+    # group's rules (about Alertmanager's own health/config) would render
+    # with nothing to monitor -- same reasoning as the controller-manager/
+    # scheduler groups below.
+    alertmanager: false
     general: true
     k8s: true
     kubeApiserver: true
