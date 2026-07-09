@@ -109,7 +109,6 @@ addons:
     syncWave: "-10"
   kiali:
     enabled: true
-    disabledForEnvironments: [dev]
     namespace: kiali
     repoURL: https://kiali.org/helm-charts
     chart: kiali-server

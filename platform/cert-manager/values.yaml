@@ -5,8 +5,6 @@ webhook:
   replicaCount: 1
   securePort: 10250
   hostNetwork: false
-  securityContext:
-    enabled: true
   extraArgs:
     - --v=5
   timeoutSeconds: 30
