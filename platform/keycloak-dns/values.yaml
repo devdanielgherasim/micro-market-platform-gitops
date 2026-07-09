@@ -5,29 +5,37 @@
 # binding that depends on it (e.g. Azure's keycloak_custom_domain_enabled).
 records:
   azure:
-    - dnsName: auth.danielgherasim.com
-      recordType: CNAME
-      targets:
-        - keycloak-dev.bluesmoke-4b42d76f.northeurope.azurecontainerapps.io
-    - dnsName: asuid.auth.danielgherasim.com
-      recordType: TXT
-      targets:
-        - 6A26C896B9E1DEFC5E1060A500F8172A01FAD815EBDC4C14CBBA2607A423A54C
+    dev:
+      - dnsName: auth-dev.danielgherasim.com
+        recordType: CNAME
+        targets:
+          - keycloak-dev.bluesmoke-4b42d76f.northeurope.azurecontainerapps.io
+      - dnsName: asuid.auth-dev.danielgherasim.com
+        recordType: TXT
+        targets:
+          - 6A26C896B9E1DEFC5E1060A500F8172A01FAD815EBDC4C14CBBA2607A423A54C
+    staging:
+      []
+      # Populated once infrastructure/terraform/azure (staging workspace) is
+      # applied — see infrastructure/plans/2026-07-09-per-env-clusters-regions.md.
+      # - dnsName: auth-staging.danielgherasim.com
+      #   recordType: CNAME
+      #   targets:
+      #     - "" # keycloak_default_hostname Terraform output (staging workspace)
+      # - dnsName: asuid.auth-staging.danielgherasim.com
+      #   recordType: TXT
+      #   targets:
+      #     - "" # keycloak_custom_domain_verification_id Terraform output (staging workspace)
+    prod:
+      []
+      # Same pattern, prod workspace. dnsName stays unprefixed
+      # ("auth.danielgherasim.com") per the apex convention — see
+      # infrastructure/terraform/azure/keycloak_paas.tf's keycloak_hostname local.
   aws:
-    []
-    # - dnsName: auth.danielgherasim.com
-    #   recordType: CNAME
-    #   targets:
-    #     - "" # keycloak_apprunner_service_url Terraform output, once custom
-    #          # domain association is validated
-    # One entry per record in keycloak_custom_domain_certificate_validation_records:
-    # - dnsName: ""
-    #   recordType: CNAME
-    #   targets:
-    #     - ""
+    dev: []
+    staging: []
+    prod: []
   gcp:
-    []
-    # - dnsName: auth.danielgherasim.com
-    #   recordType: CNAME
-    #   targets:
-    #     - "" # from keycloak_domain_mapping_resource_records Terraform output
+    dev: []
+    staging: []
+    prod: []

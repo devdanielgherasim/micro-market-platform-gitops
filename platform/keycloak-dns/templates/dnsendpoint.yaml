@@ -1,4 +1,5 @@
-{{- $records := index .Values.records .Values.global.cloudProvider | default list -}}
+{{- $cloudRecords := index .Values.records .Values.global.cloudProvider | default dict -}}
+{{- $records := index $cloudRecords .Values.global.environment | default list -}}
 {{- if $records }}
 apiVersion: externaldns.k8s.io/v1alpha1
 kind: DNSEndpoint
