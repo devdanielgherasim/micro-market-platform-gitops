@@ -24,11 +24,11 @@ prometheus:
     resources:
       requests:
         memory: 256Mi
-        cpu: 200m
+        cpu: 100m
       limits:
         memory: 512Mi
-        cpu: 500m
-    replicas: 2
+        cpu: 300m
+    replicas: 1
     externalLabels:
       cluster: dev
       environment: dev
@@ -58,10 +58,10 @@ alertmanager:
     resources:
       requests:
         memory: 128Mi
-        cpu: 100m
+        cpu: 50m
       limits:
         memory: 256Mi
-        cpu: 200m
+        cpu: 100m
 
 grafana:
   replicas: 1
@@ -261,13 +261,14 @@ defaultRules:
     KubeSchedulerDown: true
 
 nodeExporter:
-  enabled: true
+  enabled: false
 
 # node-exporter is a subchart; its own values live under this alias, not
 # under `nodeExporter:` above (that key only controls the parent chart's
 # enabled flag) -- resources nested under `nodeExporter:` are silently
 # ignored by the chart.
 prometheus-node-exporter:
+  enabled: false
   resources:
     requests:
       memory: 32Mi
