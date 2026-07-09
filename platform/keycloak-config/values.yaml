@@ -4,7 +4,11 @@ global:
   environment: dev
 
 keycloak:
-  url: http://keycloak-operator.keycloak.svc.cluster.local/auth
+  # Public hostname (ADR-19: Keycloak moved off-cluster to managed PaaS per
+  # cloud). Always the same value regardless of which cloud is active,
+  # since auth.danielgherasim.com is handed between clouds by ExternalDNS
+  # (ADR-10) - no per-cloud branching needed here, unlike keycloak_paas.tf.
+  url: https://auth.danielgherasim.com/auth
   adminSecret:
     name: keycloak-admin
     passwordKey: password

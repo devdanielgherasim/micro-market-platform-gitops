@@ -11,15 +11,28 @@ keycloak:
   httpRelativePath: /auth
   db:
     vendor: postgres
-    host: postgresql.postgresql.svc.cluster.local
-    port: 5432
-    database: keycloak
+    host: ""
+    port: null
+    database: ""
     usernameSecret:
       name: keycloak-postgresql
-      key: username
+      key: POSTGRES_USER
     passwordSecret:
       name: keycloak-postgresql
-      key: password
+      key: POSTGRES_PASSWORD
+  additionalOptions:
+    - name: db-url-host
+      secret:
+        name: keycloak-postgresql
+        key: POSTGRES_HOST
+    - name: db-url-port
+      secret:
+        name: keycloak-postgresql
+        key: POSTGRES_PORT
+    - name: db-url-database
+      secret:
+        name: keycloak-postgresql
+        key: POSTGRES_DB
   # Applied when global.environment == "dev" (single instance, right-sized
   # for a dissertation-scale cluster). See templates/keycloak.yaml.
   devResources:

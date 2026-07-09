@@ -192,21 +192,38 @@ addons:
     path: platform/postgres-cluster
     syncWave: "0"
   keycloak-operator:
-    # Local chart (platform/keycloak-operator), not an upstream chart source:
-    # the Keycloak maintainers don't publish a Helm chart, and
-    # quay.io/keycloak/keycloak-operator is a container image reference, not
-    # a chart -- see that chart's Chart.yaml for the full explanation.
-    enabled: true
+    # Disabled 2026-07-09 (ADR-19): Keycloak moved off-cluster to managed
+    # serverless containers (Azure Container Apps / AWS App Runner / GCP
+    # Cloud Run - see infrastructure/terraform/<cloud>/keycloak_paas.tf).
+    # Left in place, not deleted, same precedent as cloudnative-pg/
+    # postgres-cluster below. Local chart (platform/keycloak-operator), not
+    # an upstream chart source: the Keycloak maintainers don't publish a
+    # Helm chart, and quay.io/keycloak/keycloak-operator is a container
+    # image reference, not a chart -- see that chart's Chart.yaml.
+    enabled: false
     namespace: keycloak
     path: platform/keycloak-operator
     syncWave: "1"
   keycloak:
-    enabled: true
+    # Disabled 2026-07-09 (ADR-19) - see keycloak-operator above.
+    enabled: false
     namespace: keycloak
     path: platform/keycloak
     syncWave: "2"
   keycloak-config:
+    # Stays enabled: keycloak-config-cli still applies the realm as code,
+    # now against the off-cluster PaaS admin API instead of an in-cluster
+    # Service (ADR-19) - see platform/keycloak-config/values.yaml.
     enabled: true
     namespace: keycloak
     path: platform/keycloak-config
     syncWave: "3"
+  keycloak-dns:
+    # DNSEndpoint records so ExternalDNS can publish auth.danielgherasim.com
+    # for Keycloak's off-cluster PaaS endpoint (ADR-19), replacing the
+    # HTTPRoute-derived record ExternalDNS used to pick up automatically
+    # from the in-cluster Gateway.
+    enabled: true
+    namespace: external-dns
+    path: platform/keycloak-dns
+    syncWave: "1"

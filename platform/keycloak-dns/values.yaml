@@ -1,0 +1,33 @@
+# Populated from each cloud's Terraform outputs after apply (same pattern as
+# bootstrap/root/values.yaml's secretStores.* placeholders): fill in the
+# active cloud's records, run helm/ArgoCD sync, then confirm
+# `dig auth.danielgherasim.com` resolves before enabling a custom-domain
+# binding that depends on it (e.g. Azure's keycloak_custom_domain_enabled).
+records:
+  azure:
+    - dnsName: auth.danielgherasim.com
+      recordType: CNAME
+      targets:
+        - keycloak-dev--zlg7o1i.lemonocean-9af9834a.northeurope.azurecontainerapps.io
+    - dnsName: asuid.auth.danielgherasim.com
+      recordType: TXT
+      targets:
+        - 6A26C896B9E1DEFC5E1060A500F8172A01FAD815EBDC4C14CBBA2607A423A54C
+  aws:
+    []
+    # - dnsName: auth.danielgherasim.com
+    #   recordType: CNAME
+    #   targets:
+    #     - "" # keycloak_apprunner_service_url Terraform output, once custom
+    #          # domain association is validated
+    # One entry per record in keycloak_custom_domain_certificate_validation_records:
+    # - dnsName: ""
+    #   recordType: CNAME
+    #   targets:
+    #     - ""
+  gcp:
+    []
+    # - dnsName: auth.danielgherasim.com
+    #   recordType: CNAME
+    #   targets:
+    #     - "" # from keycloak_domain_mapping_resource_records Terraform output

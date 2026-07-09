@@ -22,9 +22,14 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
-    # Keycloak admin REST API (KEYCLOAK_URL, same cluster).
+    # Keycloak admin REST API (KEYCLOAK_URL) is now an external PaaS
+    # endpoint (ADR-19), not an in-cluster Service - PaaS control planes
+    # don't publish stable CIDR ranges, so this is scoped to HTTPS only
+    # rather than a specific destination (documented lab-scope tradeoff,
+    # same class as ADR-17's).
     - to:
-        - podSelector: {}
+        - ipBlock:
+            cidr: 0.0.0.0/0
       ports:
         - protocol: TCP
-          port: 8080
+          port: 443

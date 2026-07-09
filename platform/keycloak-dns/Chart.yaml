@@ -1,0 +1,9 @@
+apiVersion: v2
+name: keycloak-dns
+description: >-
+  DNSEndpoint records so ExternalDNS can publish auth.danielgherasim.com for
+  Keycloak's off-cluster PaaS endpoint (ADR-19) - there is no in-cluster
+  HTTPRoute/Service for ExternalDNS to derive a record from once Keycloak
+  leaves the cluster.
+type: application
+version: 0.1.0

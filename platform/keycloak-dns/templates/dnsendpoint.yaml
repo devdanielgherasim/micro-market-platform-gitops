@@ -1,0 +1,21 @@
+{{- $records := index .Values.records .Values.global.cloudProvider | default list -}}
+{{- if $records }}
+apiVersion: externaldns.k8s.io/v1alpha1
+kind: DNSEndpoint
+metadata:
+  name: keycloak-auth
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    app.kubernetes.io/name: keycloak-dns
+    app.kubernetes.io/part-of: platform
+spec:
+  endpoints:
+    {{- range $records }}
+    - dnsName: {{ .dnsName | quote }}
+      recordType: {{ .recordType | quote }}
+      targets:
+        {{- range .targets }}
+        - {{ . | quote }}
+        {{- end }}
+    {{- end }}
+{{- end }}

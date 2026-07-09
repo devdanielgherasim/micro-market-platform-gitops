@@ -15,9 +15,15 @@ spec:
       secret: keycloak-admin
   db:
     vendor: {{ .Values.keycloak.db.vendor | quote }}
+    {{- with .Values.keycloak.db.host }}
     host: {{ .Values.keycloak.db.host | quote }}
+    {{- end }}
+    {{- with .Values.keycloak.db.port }}
     port: {{ .Values.keycloak.db.port }}
+    {{- end }}
+    {{- with .Values.keycloak.db.database }}
     database: {{ .Values.keycloak.db.database | quote }}
+    {{- end }}
     usernameSecret:
       name: {{ .Values.keycloak.db.usernameSecret.name | quote }}
       key: {{ .Values.keycloak.db.usernameSecret.key | quote }}
@@ -49,6 +55,16 @@ spec:
       value: "true"
     - name: log-level
       value: info
+    {{- range .Values.keycloak.additionalOptions }}
+    - name: {{ .name | quote }}
+      {{- if .value }}
+      value: {{ .value | quote }}
+      {{- else if .secret }}
+      secret:
+        name: {{ .secret.name | quote }}
+        key: {{ .secret.key | quote }}
+      {{- end }}
+    {{- end }}
   resources:
 {{- if eq .Values.global.environment "dev" }}
 {{ toYaml .Values.keycloak.devResources | indent 4 }}

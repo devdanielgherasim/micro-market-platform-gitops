@@ -87,6 +87,7 @@ spec:
           sources:
             - gateway-httproute
             - service
+            - crd
           domainFilters:
             - {{ $root.Values.global.domain | quote }}
           policy: sync

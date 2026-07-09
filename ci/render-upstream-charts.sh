@@ -64,7 +64,6 @@ kube-prometheus-stack|https://prometheus-community.github.io/helm-charts|kube-pr
 loki|https://grafana.github.io/helm-charts|loki|6.45.2|platform/loki/values.yaml|monitoring
 tempo|https://grafana.github.io/helm-charts|tempo|1.24.4|platform/tempo/values.yaml|monitoring
 alloy|https://grafana.github.io/helm-charts|alloy|1.10.0|platform/alloy/values.yaml|monitoring
-cloudnative-pg|https://cloudnative-pg.github.io/charts|cloudnative-pg|0.29.0|platform/cloudnative-pg/values.yaml|postgresql
 '
 
 # Add each distinct classic Helm repo once.

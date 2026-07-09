@@ -4,6 +4,10 @@ provider:
 sources:
   - gateway-httproute
   - service
+  # DNSEndpoint CRD source (ADR-19): publishes auth.danielgherasim.com for
+  # Keycloak's off-cluster PaaS endpoint, which has no in-cluster
+  # HTTPRoute/Service to derive a record from. See platform/keycloak-dns.
+  - crd
 
 domainFilters:
   - danielgherasim.com
