@@ -1,11 +1,10 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: keycloak-realm-config
+  name: {{ include "keycloak-config.realmConfigName" . }}
   namespace: {{ .Release.Namespace | quote }}
   labels:
-    app.kubernetes.io/name: keycloak-config
-    app.kubernetes.io/part-of: platform
+    {{- include "keycloak-config.labels" . | nindent 4 }}
 data:
   microservices-realm.json: |
     {

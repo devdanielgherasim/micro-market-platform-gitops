@@ -1,11 +1,10 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: keycloak-config-sync
+  name: {{ include "keycloak-config.fullname" . }}
   namespace: {{ .Release.Namespace | quote }}
   labels:
-    app.kubernetes.io/name: keycloak-config
-    app.kubernetes.io/part-of: platform
+    {{- include "keycloak-config.labels" . | nindent 4 }}
   annotations:
     argocd.argoproj.io/hook: Sync
     argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
@@ -15,7 +14,7 @@ spec:
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: keycloak-config
+        {{- include "keycloak-config.selectorLabels" . | nindent 8 }}
     spec:
       restartPolicy: OnFailure
       automountServiceAccountToken: false
@@ -103,6 +102,6 @@ spec:
       volumes:
         - name: realm-config
           configMap:
-            name: keycloak-realm-config
+            name: {{ include "keycloak-config.realmConfigName" . }}
         - name: tmp
           emptyDir: {}

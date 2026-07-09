@@ -3,11 +3,10 @@
 apiVersion: externaldns.k8s.io/v1alpha1
 kind: DNSEndpoint
 metadata:
-  name: keycloak-auth
+  name: {{ include "keycloak-dns.fullname" . }}
   namespace: {{ .Release.Namespace | quote }}
   labels:
-    app.kubernetes.io/name: keycloak-dns
-    app.kubernetes.io/part-of: platform
+    {{- include "keycloak-dns.labels" . | nindent 4 }}
 spec:
   endpoints:
     {{- range $records }}
