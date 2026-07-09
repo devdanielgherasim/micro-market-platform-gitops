@@ -8,7 +8,7 @@ records:
     - dnsName: auth.danielgherasim.com
       recordType: CNAME
       targets:
-        - keycloak-dev--zlg7o1i.lemonocean-9af9834a.northeurope.azurecontainerapps.io
+        - keycloak-dev.bluesmoke-4b42d76f.northeurope.azurecontainerapps.io
     - dnsName: asuid.auth.danielgherasim.com
       recordType: TXT
       targets:
