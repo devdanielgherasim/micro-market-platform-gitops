@@ -7,6 +7,17 @@ metadata:
     app.kubernetes.io/part-of: platform
 spec:
   gatewayClassName: istio
+  infrastructure:
+    annotations:
+      # The gateway has no catch-all listener (Gateway API routes are all
+      # hostname-scoped), so Azure's default HTTP/HTTPS LB health probes
+      # (bare GET /, no matching SNI/Host) get rejected by Envoy
+      # (filter_chain_not_found / route_not_found), marking the backend
+      # unhealthy and blackholing ALL external traffic on 443/80 -- not
+      # just the probe. Force plain TCP probes instead, matching the
+      # status-port (15021) behavior that already works.
+      service.beta.kubernetes.io/port_443_health-probe_protocol: tcp
+      service.beta.kubernetes.io/port_80_health-probe_protocol: tcp
   listeners:
     - name: https
       hostname: {{ .Values.global.domain | quote }}
