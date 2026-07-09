@@ -90,6 +90,7 @@ spec:
             - crd
           domainFilters:
             - {{ $root.Values.global.domain | quote }}
+            - {{ $root.Values.global.authDomain | quote }}
           policy: sync
           txtOwnerId: micro-market
           env:
