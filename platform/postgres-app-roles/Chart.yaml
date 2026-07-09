@@ -1,0 +1,5 @@
+apiVersion: v2
+name: postgres-app-roles
+description: Idempotent Job that creates/updates the catalog_svc, orders_svc, and audit_svc PostgreSQL roles, schemas, and grants on the private managed PostgreSQL server from inside the cluster network.
+type: application
+version: 0.1.0

@@ -1,0 +1,32 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "postgres-app-roles.fullname" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "postgres-app-roles.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "postgres-app-roles.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  # No ingress: this is a one-shot sync Job, nothing needs to reach it.
+  ingress: []
+  egress:
+    # DNS resolution (the Postgres FQDN resolves via the private DNS zone
+    # linked to the AKS VNet - see infrastructure/terraform/azure/network.tf).
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Managed PostgreSQL, reached over the peered/delegated VNet - CIDR is
+    # cloud-specific, see values.yaml network.postgresqlCidr comments.
+    - to:
+        - ipBlock:
+            cidr: {{ index .Values.network.postgresqlCidr .Values.global.cloudProvider | quote }}
+      ports:
+        - protocol: TCP
+          port: 5432

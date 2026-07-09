@@ -1,0 +1,101 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "postgres-app-roles.fullname" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "postgres-app-roles.labels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+spec:
+  backoffLimit: {{ .Values.sync.backoffLimit }}
+  ttlSecondsAfterFinished: {{ .Values.sync.ttlSecondsAfterFinished }}
+  template:
+    metadata:
+      labels:
+        {{- include "postgres-app-roles.selectorLabels" . | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      automountServiceAccountToken: false
+      securityContext:
+        fsGroup: 70
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: postgres-app-roles
+          image: {{ .Values.image | quote }}
+          imagePullPolicy: Always
+          command: ["/bin/sh", "/scripts/apply-roles.sh"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            # postgres:16-alpine's built-in "postgres" user is uid/gid 70
+            # (verified against the pulled image - alpine's postgres image
+            # differs from the debian-based image's uid/gid 999).
+            runAsUser: 70
+            runAsGroup: 70
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          env:
+            - name: HOME
+              value: /tmp
+            - name: PGSSLMODE
+              value: require
+            - name: PGCONNECT_TIMEOUT
+              value: "15"
+            - name: PGHOST
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.adminSecret.name | quote }}
+                  key: host
+            - name: PGPORT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.adminSecret.name | quote }}
+                  key: port
+            - name: PGDATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.adminSecret.name | quote }}
+                  key: database
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.adminSecret.name | quote }}
+                  key: username
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.adminSecret.name | quote }}
+                  key: password
+            {{- range .Values.roles }}
+            - name: {{ .envPrefix }}_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .secretName | quote }}
+                  key: password
+            {{- end }}
+          volumeMounts:
+            - name: script
+              mountPath: /scripts
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+          workingDir: /tmp
+      volumes:
+        - name: script
+          configMap:
+            name: {{ include "postgres-app-roles.scriptConfigMapName" . }}
+            defaultMode: 0555
+        - name: tmp
+          emptyDir: {}

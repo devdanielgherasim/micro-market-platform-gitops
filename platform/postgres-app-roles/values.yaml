@@ -1,0 +1,49 @@
+global:
+  cloudProvider: azure
+  environment: dev
+
+# Tag tracks the managed PostgreSQL major version pinned in
+# infrastructure/terraform/*/database.tf (`version = "16"`), same
+# major-only granularity that resource already uses.
+image: postgres:16-alpine
+
+sync:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 600
+
+adminSecret:
+  # Populated by platform/external-secrets-config's "postgresql-admin-secret"
+  # ExternalSecret (username, password, host, port, database of the
+  # Postgres owner/admin role Terraform creates in secrets.tf).
+  name: postgresql-admin-secret
+
+roles:
+  - name: catalog
+    envPrefix: CATALOG
+    username: catalog_svc
+    schema: catalog
+    secretName: catalog-db-secret
+  - name: orders
+    envPrefix: ORDERS
+    username: orders_svc
+    schema: orders
+    secretName: orders-db-secret
+  - name: audit
+    envPrefix: AUDIT
+    username: audit_svc
+    schema: audit
+    secretName: audit-db-secret
+
+network:
+  # Destination CIDR for the Postgres NetworkPolicy egress rule. Azure's is
+  # exact (the delegated Postgres subnet from
+  # infrastructure/terraform/azure/network.tf's azurerm_subnet.postgresql,
+  # address_prefixes = ["10.43.0.0/24"]) - AWS/GCP fall back to a broad
+  # RFC1918 range because their managed-Postgres network layout is still
+  # design/IaC-complete but unvalidated (see decision-log.md ADR-19); narrow
+  # these once those legs are actually spun up and their real subnet CIDR is
+  # known.
+  postgresqlCidr:
+    azure: 10.43.0.0/24
+    aws: 10.0.0.0/8
+    gcp: 10.0.0.0/8

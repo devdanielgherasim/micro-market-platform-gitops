@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "postgres-app-roles.scriptConfigMapName" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "postgres-app-roles.labels" . | nindent 4 }}
+data:
+  apply-roles.sh: |
+    #!/bin/sh
+    set -eu
+
+    # Idempotent role/schema/grant provisioning, mirroring
+    # infrastructure/terraform/*/database_roles.tf's postgresql_role /
+    # postgresql_schema / postgresql_grant / postgresql_default_privileges
+    # resources - CREATE/ALTER are chosen via a WHERE EXISTS check because
+    # PostgreSQL has no CREATE ROLE IF NOT EXISTS. Every identifier and
+    # literal is passed through psql's -v mechanism and substituted with
+    # :'name' (quoted-literal) syntax, which psql escapes safely itself, so
+    # this is not vulnerable to SQL injection even though the values here
+    # (Terraform-generated alphanumeric passwords, hardcoded role/schema
+    # names) are already trusted.
+    #
+    # The heredoc body/terminator below is deliberately flush-left (not
+    # indented with the surrounding shell code): `<<'SQL'` requires the
+    # terminator to start at column 0, and this file has no literal tabs to
+    # use `<<-'SQL'`'s tab-stripping instead (it's rendered from a Helm
+    # space-indented YAML block scalar).
+    apply_role() {
+      role_username="$1"
+      role_password="$2"
+      role_schema="$3"
+
+      echo "postgres-app-roles: applying role '${role_username}' (schema '${role_schema}')"
+
+      PGPASSWORD="$PGPASSWORD" psql \
+        -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" \
+        -v ON_ERROR_STOP=1 \
+        -v role_name="$role_username" \
+        -v role_password="$role_password" \
+        -v schema_name="$role_schema" \
+        -v admin_role="$PGUSER" <<'SQL'
+    SELECT format('CREATE ROLE %I LOGIN PASSWORD %L', :'role_name', :'role_password')
+    WHERE NOT EXISTS (SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = :'role_name') \gexec
+
+    SELECT format('ALTER ROLE %I WITH LOGIN PASSWORD %L', :'role_name', :'role_password')
+    WHERE EXISTS (SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = :'role_name') \gexec
+
+    SELECT format('ALTER ROLE %I SET search_path TO %I, public', :'role_name', :'schema_name') \gexec
+
+    SELECT format('CREATE SCHEMA IF NOT EXISTS %I AUTHORIZATION %I', :'schema_name', :'role_name') \gexec
+
+    SELECT format('GRANT CONNECT, TEMPORARY ON DATABASE %I TO %I', current_database(), :'role_name') \gexec
+
+    SELECT format('GRANT USAGE, CREATE ON SCHEMA %I TO %I', :'schema_name', :'role_name') \gexec
+
+    SELECT format('GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON ALL TABLES IN SCHEMA %I TO %I', :'schema_name', :'role_name') \gexec
+
+    SELECT format('GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA %I TO %I', :'schema_name', :'role_name') \gexec
+
+    SELECT format('ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA %I GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON TABLES TO %I', :'admin_role', :'schema_name', :'role_name') \gexec
+
+    SELECT format('ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA %I GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO %I', :'admin_role', :'schema_name', :'role_name') \gexec
+    SQL
+    }
+
+    {{- range .Values.roles }}
+    apply_role "{{ .username }}" "${{ .envPrefix }}_DB_PASSWORD" "{{ .schema }}"
+    {{- end }}
+
+    echo "postgres-app-roles: done."

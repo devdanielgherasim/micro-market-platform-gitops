@@ -190,6 +190,21 @@ addons:
     namespace: postgresql
     path: platform/postgres-cluster
     syncWave: "0"
+  postgres-app-roles:
+    # Creates/updates catalog_svc/orders_svc/audit_svc roles, schemas, and
+    # grants on the managed PostgreSQL server (private-only - see ADR-9)
+    # from inside the cluster network, since the cyrilgdn/postgresql
+    # Terraform provider can't reach it from a normal local/CI runner (see
+    # infrastructure/plans/2026-07-09-azure-private-postgres-roles.md and
+    # plans/2026-07-09-postgres-app-role-job.md). Runs after
+    # external-secrets-config (syncWave -6) so the admin and per-service DB
+    # secrets it reads already exist; namespace matches where
+    # external-secrets-config already projects catalog-db-secret/
+    # orders-db-secret/audit-db-secret/postgresql-admin-secret.
+    enabled: true
+    namespace: micro-market-dev
+    path: platform/postgres-app-roles
+    syncWave: "-1"
   keycloak-operator:
     # Disabled 2026-07-09 (ADR-19): Keycloak moved off-cluster to managed
     # serverless containers (Azure Container Apps / AWS App Runner / GCP
