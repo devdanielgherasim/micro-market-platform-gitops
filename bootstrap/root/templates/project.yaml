@@ -4,7 +4,7 @@ metadata:
   name: {{ .Values.global.project | quote }}
   namespace: {{ .Values.project.namespace | quote }}
   finalizers:
-    - resources-finalizer.argocd.argoproj.io/finalizer
+    - resources-finalizer.argocd.argoproj.io
 spec:
   description: Platform add-ons managed by Argo CD
   sourceRepos:
