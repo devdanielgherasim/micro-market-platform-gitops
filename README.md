@@ -20,7 +20,7 @@ ci/
   global-values.yaml          # CI stand-in for ArgoCD-injected global values
   secret-stores-values.yaml   # extra values only external-secrets-config needs in CI
   render-upstream-charts.sh   # pulls + renders every upstream-chart addon for real CI coverage
-.gitlab-ci.yml
+.github/workflows/ci.yml
 .checkov.yaml
 ```
 
@@ -28,7 +28,7 @@ ci/
 
 ## Two addon kinds
 
-Every addon in `bootstrap/root/values.yaml`'s `addons:` map is one of exactly two kinds — this distinction is documented directly in `.gitlab-ci.yml`'s own header comment, and it shapes almost everything else about how this repo is validated:
+Every addon in `bootstrap/root/values.yaml`'s `addons:` map is one of exactly two kinds — this distinction is documented directly in `.github/workflows/ci.yml`'s own header comment, and it shapes almost everything else about how this repo is validated:
 
 1. **Local charts** — referenced by `path:` in `values.yaml`, with a real `Chart.yaml` + `templates/` in `platform/<addon>/`: `storage-class`, `cert-manager-config`, `gateway`, `external-secrets-config`, `monitoring-config`, `postgres-cluster`, `postgres-app-roles`, `keycloak`, `keycloak-config`, `keycloak-operator` (10 total). These hold Kubernetes resources that aren't themselves an upstream Helm release — cluster issuers, the shared Gateway, ExternalSecret/ClusterSecretStore objects, Grafana provisioning/alerting config, the CloudNativePG `Cluster` CR, a Sync-hook Job that creates the app-service PostgreSQL roles from inside the cluster network (`postgres-app-roles` — see its own comment in `bootstrap/root/values.yaml`), the Keycloak `Keycloak`/`KeycloakRealmImport` CRs, and (see below) a fully vendored operator.
 2. **Upstream-chart addons** — referenced by `chart:`+`repoURL:`+`targetRevision:` in `values.yaml`, with **only a `values.yaml`** in `platform/<addon>/` (no `Chart.yaml`, no templates): `aws-load-balancer-controller`, `cert-manager`, `gateway-api-crds`, `istio-base`, `istio-cni`, `istiod`, `ztunnel`, `kiali`, `external-dns`, `external-secrets`, `kube-prometheus-stack`, `loki`, `tempo`, `alloy`, `cloudnative-pg` (14 total). ArgoCD pulls the real chart straight from its upstream Helm repo at sync time and uses this repo's `values.yaml` purely as a `valueFiles` overlay (`applications.yaml`'s `sources:`-based branch, a multi-source ArgoCD Application).
@@ -49,13 +49,16 @@ The Keycloak project deliberately does **not** publish a Helm chart at all — [
 
 Fix: the official CRDs (`keycloaks.k8s.keycloak.org`, `keycloakrealmimports.k8s.keycloak.org`) and RBAC/ServiceAccount/Service/Deployment manifests were vendored from `github.com/keycloak/keycloak-k8s-resources` at the pinned `26.3.1` tag into `platform/keycloak-operator/{crds,templates}` as a proper local chart — CRDs live in Helm's dedicated `crds/` directory (installed as-is, not templated); only the container `resources` block is templated, everything else stays close to upstream. `bootstrap/root/values.yaml`'s `keycloak-operator` entry is `path`-based like every other local chart, not `chart`-based. The vendored Deployment was additionally hardened (upstream ships with zero securityContext): `allowPrivilegeEscalation: false`, all capabilities dropped, seccomp `RuntimeDefault`, plus a dedicated NetworkPolicy — `runAsNonRoot`/`readOnlyRootFilesystem` were deliberately **not** set, because upstream issue `keycloak/keycloak-operator#458` documents `runAsNonRoot` breaking this exact image's startup, and neither could be verified without a live cluster (documented via `checkov.io/skip` annotations on the resource, not guessed).
 
-## CI pipeline (`.gitlab-ci.yml`) — first CI this repo ever had
+## CI pipeline (`.github/workflows/ci.yml`)
 
-Stages: **`lint → template → scan`** (no promote stage in this repo — that's `deployment`'s concern).
+CI runs on GitHub Actions (migrated from GitLab CI, see
+`Sources/plans/2026-07-08-gitlab-to-github-migration.md`). No promote job in
+this repo — that's `deployment`'s concern. Jobs:
 
+- `security-scan-gate`: calls the reusable workflow in `devdanielgherasim/micro-market-utilities`. Uses `codeql-languages: actions` since this repo's analyzable code surface is GitHub Actions workflow code, not an application language.
 - `helm-lint`: `helm lint` against each of the 10 `LOCAL_CHARTS`, using `ci/global-values.yaml` (plus `ci/secret-stores-values.yaml` for `external-secrets-config`, kept as a separate file because several upstream charts — e.g. cert-manager — have a strict `values.schema.json` that would reject the extra `aws`/`azure`/`gcp` keys if merged into the shared global file).
 - `helm-template`: renders the 10 local charts (with `--include-crds`, relevant today only to `keycloak-operator`'s vendored CRDs) into `rendered/local/<addon>/`, then runs **`ci/render-upstream-charts.sh`** — since the 14 upstream-chart addon directories contain no chart to `helm template` directly, this script does what ArgoCD effectively does at sync time: pull each pinned upstream chart from its real Helm repo and render it with this repo's local `values.yaml` on top, into `rendered/upstream/<addon>/`. The addon table inside the script (name/repoURL/chart/version/valuesPath/namespace) is a deliberately hand-maintained mirror of `bootstrap/root/values.yaml`'s `addons:` map — the CI image (`alpine/helm`) has no YAML parser, and this list changes rarely enough that a small maintained table beats adding a parsing dependency. A single addon failing to render doesn't abort the rest of the script, but the job still exits non-zero overall so a real regression isn't silently swallowed.
-- `kubeconform` + `checkov` (both `scan`, both `needs: [helm-template]`): validate everything under `rendered/`. `kubeconform` again uses `-ignore-missing-schemas` plus the `datreeio/CRDs-catalog` source, covering cert-manager/Gateway API/several others; core Kubernetes kinds are always validated strictly.
+- `kubeconform` + `checkov` (both depend on `helm-template`): validate everything under `rendered/`. `kubeconform` again uses `-ignore-missing-schemas` plus the `datreeio/CRDs-catalog` source, covering cert-manager/Gateway API/several others; core Kubernetes kinds are always validated strictly.
 
 ### `.checkov.yaml`
 

@@ -1,5 +1,5 @@
 # Checkov config for the `kubernetes` framework, scanning helm-template
-# output rendered by CI (see .gitlab-ci.yml, `helm-template` job -> `rendered/`
+# output rendered by CI (see .github/workflows/ci.yml, `helm-template` job -> `rendered/`
 # artifact: rendered/local/<addon>/ for this repo's own 9 charts,
 # rendered/upstream/<addon>/ for the 14 third-party charts pulled and
 # rendered by ci/render-upstream-charts.sh).
